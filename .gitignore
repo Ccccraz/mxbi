@@ -1,4 +1,5 @@
 data/
+config/config_session.json
 # Created by https://www.toptal.com/developers/gitignore/api/linux,windows,macos,python
 # Edit at https://www.toptal.com/developers/gitignore?templates=linux,windows,macos,python
 
