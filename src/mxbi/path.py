@@ -1,0 +1,15 @@
+from pathlib import Path
+
+# TODO: XDG Base Directory Specification
+ROOT_DIR_PATH = Path(__file__).parents[2]
+
+CONFIG_DIR_PATH = ROOT_DIR_PATH / "config"
+CONFIG_SESSION_FILENAME = "config_session.json"
+CONFIG_SESSION_PATH = CONFIG_DIR_PATH / CONFIG_SESSION_FILENAME
+
+OPTIONS_SESSION_FILENAME = "options_session.json"
+OPTIONS_SESSION_PATH = CONFIG_DIR_PATH / OPTIONS_SESSION_FILENAME
+
+DATA_DIR_PATH = Path("data")
+
+LOG_PATH = ROOT_DIR_PATH / "log"
