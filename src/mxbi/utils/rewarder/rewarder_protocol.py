@@ -1,0 +1,9 @@
+from typing import Protocol
+
+
+class RewarderProtocol(Protocol):
+    def give_reward(self, duration: int) -> None: ...
+
+    def stop_reward(self, all: bool) -> None: ...
+
+    def reverse(self) -> None: ...
