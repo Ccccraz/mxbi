@@ -3,6 +3,7 @@ from tkinter import Tk
 from tkinter.ttk import Button, Frame, Label
 
 from mxbi.config import session_config, session_options
+from mxbi.models.animal import AnimalConfig
 from mxbi.models.reward import RewardEnum
 from mxbi.models.session import ScreenTypeEnum, SessionConfig
 from mxbi.ui.components.animal_card import AnimalCard
@@ -27,6 +28,7 @@ class LaunchPanel:
 
         self._init_general_ui()
         self._init_animals_ui()
+        self._init_animals_buttons_ui()
         self._init_buttons_ui()
 
         self._bind_events()
@@ -88,20 +90,31 @@ class LaunchPanel:
         self.entry_comments.pack(fill="x")
 
     def _init_animals_ui(self) -> None:
-        frame_animals = Frame(self._frame)
-        frame_animals.pack(fill="x")
-        frame_animals.columnconfigure(0, weight=1)
-        frame_animals.columnconfigure(1, weight=1)
+        self.frame_animals = Frame(self._frame)
+        self.frame_animals.pack(fill="x")
+        self.frame_animals.columnconfigure(0, weight=1)
+        self.frame_animals.columnconfigure(1, weight=1)
 
         self._animal_cards: list[AnimalCard] = []
         for index, animal in enumerate(session_config.value.animals.values()):
             animal_card = AnimalCard(
-                frame_animals, session_options.value.animal, animal, index
+                self.frame_animals, session_options.value.animal, animal, index
             )
             animal_card.grid(
                 row=index // 2, column=index % 2, padx=2, pady=2, sticky="ew"
             )
             self._animal_cards.append(animal_card)
+
+    def _init_animals_buttons_ui(self) -> None:
+        frame_animals_buttons = Frame(self._frame)
+        frame_animals_buttons.pack(fill="x")
+        frame_animals_buttons.columnconfigure(0, weight=1)
+
+        button_add_animal = Button(frame_animals_buttons, text="Add animal", command=self._add_animal)
+        button_add_animal.grid(row=0, column=0, padx=2, pady=2, sticky="w")
+
+        button_remove_animal = Button(frame_animals_buttons, text="Remove animal", command=self._remove_animal)
+        button_remove_animal.grid(row=0, column=1, padx=2, pady=2, sticky="e")
 
     def _init_buttons_ui(self) -> None:
         frame_button = Frame(self._frame)
@@ -113,6 +126,24 @@ class LaunchPanel:
 
         button_start = Button(frame_button, text="Start", command=self.save)
         button_start.grid(row=0, column=1, padx=2, pady=2, sticky="e")
+
+    def _add_animal(self) -> None:
+        if self.frame_animals is None:
+            return
+
+        index = len(self._animal_cards)
+        new_animal = AnimalConfig()
+        animal_card = AnimalCard(
+            self.frame_animals, session_options.value.animal, new_animal, index
+        )
+        animal_card.grid(row=index // 2, column=index % 2, padx=2, pady=2, sticky="ew")
+        self._animal_cards.append(animal_card)
+
+    def _remove_animal(self) -> None:
+        if not self._animal_cards:
+            return
+        animal_card = self._animal_cards.pop()
+        animal_card.destroy()
 
     def _bind_events(self) -> None:
         self._root.protocol("WM_DELETE_WINDOW", sys.exit)
