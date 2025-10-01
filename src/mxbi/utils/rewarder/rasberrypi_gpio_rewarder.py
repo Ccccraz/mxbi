@@ -2,17 +2,20 @@ import sys
 
 from mxbi.utils.logger import logger
 
-try:
-    import RPi.GPIO as GPIO  # type: ignore
-except ImportError:
-    logger.error("RPi.GPIO is not installed")
-    sys.exit(1)
-
 from queue import Empty, Queue
 from threading import Event, Thread
 from time import sleep
 
-PUMP_PIN: int = 1
+PUMP_PIN: int = 13
+
+try:
+    import RPi.GPIO as GPIO  # type: ignore
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(PUMP_PIN, GPIO.OUT, initial=GPIO.LOW)
+except ImportError:
+    logger.error("RPi.GPIO is not installed")
+    sys.exit(1)
+
 
 
 class RasberryPiGPIORewarder:
