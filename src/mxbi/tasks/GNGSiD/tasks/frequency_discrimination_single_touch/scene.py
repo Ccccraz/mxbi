@@ -3,6 +3,7 @@ from datetime import datetime
 from random import choice, randint
 from tkinter import CENTER, Canvas, Event
 from typing import TYPE_CHECKING, Final
+from math import ceil
 
 from mxbi.models.session import ScreenConfig
 from mxbi.tasks.GNGSiD.models import Result, TouchPoistion
@@ -10,12 +11,15 @@ from mxbi.tasks.GNGSiD.tasks.frequency_discrimination_single_touch.models import
     TrialConfig,
     TrialData,
 )
-from mxbi.utils.aplayer import APlayer
+from mxbi.utils.aplayer import ToneConfig
 from mxbi.utils.scene_utils import create_circle
 
 if TYPE_CHECKING:
     from mxbi.models.animal import AnimalState
     from mxbi.theater import Theater
+
+    from numpy.typing import NDArray
+    from numpy import int16
 
 
 class GNGSiDFrequencyDiscriminationSingleTouchScene:
@@ -36,8 +40,7 @@ class GNGSiDFrequencyDiscriminationSingleTouchScene:
             self._trial_config.max_stimulus_duration,
         )
         self._freq = choice(self._trial_config.freq_match)
-
-        self._aplayer = APlayer()
+        self._tone = self._prepare_stimulus()
 
         self._on_trial_start()
 
@@ -170,7 +173,7 @@ class GNGSiDFrequencyDiscriminationSingleTouchScene:
     # region event handlers
     def _on_touched(self, event: Event) -> None:
         self._trigger_canvas.destroy()
-        self._give_stimulus()
+        self._give_stimulus(self._tone)
 
         self._backgroud.after(
             self._trial_config.sound_attention_duration,
@@ -193,7 +196,7 @@ class GNGSiDFrequencyDiscriminationSingleTouchScene:
         self._on_inter_trial()
 
     def _on_incorrect(self, event: Event) -> None:
-        self._aplayer.cancel()
+        self._theater.aplayer.stop()
         self._trigger_canvas.destroy()
 
         self._data.trial_touched_time = datetime.now().timestamp()
@@ -220,16 +223,26 @@ class GNGSiDFrequencyDiscriminationSingleTouchScene:
     # endregion
 
     # region sitmulus and reward
-    def _give_stimulus(self):
-        future = self._aplayer.play_alternating_tone_async(
-            freq1=self._freq[0],
-            freq2=self._freq[0],
-            switch_interval=0.2,
-            total_duration=(self._stimulus_duration_total + self._trial_config.sound_attention_duration) / 1000,
-            repeat=1,
-            interval=1
+    def _prepare_stimulus(self) -> "NDArray[int16]":
+        cycle = self._trial_config.stimulus_duration_single * 2
+        repeat = ceil(self._stimulus_duration_total / cycle)
+
+        repeat = max(repeat, 1)
+
+        freq_1 = ToneConfig(
+            frequency=self._freq[0],
+            duration=self._trial_config.stimulus_duration_single,
         )
 
+        freq_2 = ToneConfig(
+            frequency=self._freq[1],
+            duration=self._trial_config.stimulus_duration_single,
+        )
+
+        return self._theater.aplayer.generate_tone([freq_1, freq_2], repeat)
+
+    def _give_stimulus(self, tone: "NDArray[int16]"):
+        future = self._theater.aplayer.play(tone)
         future.add_done_callback(self._on_stimulus_complete)
 
     def _on_stimulus_complete(self, future: Future[bool]) -> None:
