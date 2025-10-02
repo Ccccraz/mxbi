@@ -1,17 +1,21 @@
-from concurrent.futures import Future
 from datetime import datetime
 from math import ceil
 from tkinter import CENTER, Canvas, Event
 from typing import TYPE_CHECKING, Final
 
+from mxbi.tasks.GNGSiD.models import Result, TouchPoistion
 from mxbi.tasks.GNGSiD.tasks.detect_touch_to_reward.models import (
     TrialData,
 )
-from mxbi.tasks.GNGSiD.models import Result, TouchPoistion
-from mxbi.utils.aplayer import APlayer
+from mxbi.utils.aplayer import ToneConfig
 from mxbi.utils.scene_utils import create_circle
 
 if TYPE_CHECKING:
+    from concurrent.futures import Future
+
+    from numpy import int16
+    from numpy.typing import NDArray
+
     from mxbi.models.animal import AnimalState
     from mxbi.models.session import ScreenConfig
     from mxbi.tasks.GNGSiD.tasks.detect_touch_to_reward.models import TrialConfig
@@ -31,7 +35,7 @@ class GNGSiDDetectTouchToRewardScene:
         self._screen_type: "Final[ScreenConfig]" = screen_type
         self._trial_config = trial_config
 
-        self._aplayer = APlayer()
+        self._tone = self._prepare_stimulus()
 
         self._on_trial_start()
 
@@ -43,6 +47,7 @@ class GNGSiDDetectTouchToRewardScene:
 
     def cancle(self) -> None:
         self._data.result = Result.CANCEL
+        self._theater.aplayer.stop()
         self._on_trial_end()
 
     # endregion
@@ -167,7 +172,7 @@ class GNGSiDDetectTouchToRewardScene:
     # endregion
 
     # region sitimulus and reward
-    def _give_stimulus(self) -> Future[bool]:
+    def _prepare_stimulus(self) -> "NDArray[int16]":
         cycle = (
             self._trial_config.stimulus_duration_single
             + self._trial_config.stimulus_interval
@@ -175,14 +180,18 @@ class GNGSiDDetectTouchToRewardScene:
         repeat = ceil(self._trial_config.stimulus_duration_total / cycle)
         repeat = max(repeat, 1)
 
-        return self._aplayer.play_tone_async(
+        freq_1 = ToneConfig(
             frequency=self._trial_config.stimulus_frequency,
-            duration=self._trial_config.stimulus_duration_single / 1000,
-            repeat=repeat,
-            interval=self._trial_config.stimulus_interval / 1000,
+            duration=self._trial_config.stimulus_duration_single,
         )
+        freq_2 = ToneConfig(frequency=0, duration=self._trial_config.stimulus_interval)
 
-    def _on_stimulus_complete(self, future: Future[bool]) -> None:
+        return self._theater.aplayer.generate_tone([freq_1, freq_2], repeat)
+
+    def _give_stimulus(self) -> "Future[bool]":
+        return self._theater.aplayer.play(self._tone)
+
+    def _on_stimulus_complete(self, future: "Future[bool]") -> None:
         if future.result():
             self._trigger_canvas.after(
                 self._trial_config.reward_delay,
