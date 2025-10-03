@@ -14,7 +14,8 @@ class Result(StrEnum):
     CANCEL = auto()
 
 
-class TouchPoistion(BaseModel):
+class TouchEvent(BaseModel):
+    time: float
     x: int
     y: int
 
@@ -29,10 +30,7 @@ class BaseTrialConfig(BaseModel):
     stimulation_size: int
 
     # audio stimulation config
-    stimulus_frequency: int
-    stimulus_duration_total: int
-    stimulus_duration_single: int
-    stimulus_interval: int
+    stimulus_duration: int
 
     # trial lifecycle
     time_out: int
@@ -48,8 +46,7 @@ class BaseTrialData(BaseModel):
     trial_id: int
     current_level_trial_id: int
     trial_start_time: float
-    trial_touched_time: float
     trial_end_time: float
     result: Result
     correct_rate: float
-    touched_coordinate: TouchPoistion
+    touch_events: list[TouchEvent]

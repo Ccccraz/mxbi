@@ -3,11 +3,9 @@ from typing import TYPE_CHECKING, Final
 from mxbi.data_logger import DataLogger
 from mxbi.models.animal import ScheduleCondition
 from mxbi.tasks.GNGSiD.models import Result
-from mxbi.tasks.GNGSiD.stages.visual_delay_stage.models import config
-from mxbi.tasks.GNGSiD.tasks.detect_single_touch.models import TrialConfig
-from mxbi.tasks.GNGSiD.tasks.detect_single_touch.scene import (
-    GNGSiDDetectSingleTouchScene,
-)
+from mxbi.tasks.GNGSiD.stages.size_reduction_stage.size_reduction_models import config
+from mxbi.tasks.GNGSiD.tasks.touch.touch_models import TrialConfig
+from mxbi.tasks.GNGSiD.tasks.touch.touch_scene import GNGSiDTouchScene
 from mxbi.utils.logger import logger
 
 if TYPE_CHECKING:
@@ -17,8 +15,8 @@ if TYPE_CHECKING:
     from mxbi.theater import Theater
 
 
-class GNGSiDVisualDelayStage:
-    STAGE_NAME: Final[str] = "GNGSiD_VISUAL_DELAY_STAGE"
+class SizeReductionStage:
+    STAGE_NAME: Final[str] = "GNGSiD_SIZE_REDUCTION_STAGE"
 
     def __init__(
         self,
@@ -32,8 +30,6 @@ class GNGSiDVisualDelayStage:
         self._stage_config = config.root["default"]
         _fixed_config = self._stage_config.params
         _levels_config = self._stage_config.levels_table[animal_state.level]
-        print(_fixed_config)
-        print(_levels_config)
 
         _config = TrialConfig(
             **{**_fixed_config.model_dump(), **_levels_config.model_dump()}
@@ -43,7 +39,7 @@ class GNGSiDVisualDelayStage:
             self._session_state, self._animal_state.name, self.STAGE_NAME
         )
 
-        self._task = GNGSiDDetectSingleTouchScene(
+        self._task = GNGSiDTouchScene(
             theater,
             animal_state,
             session_state.session_config.screen_type,
@@ -56,7 +52,7 @@ class GNGSiDVisualDelayStage:
 
         feedback = self._handle_result(trial_data.result)
         logger.debug(
-            f"Size Reduction Stage: "
+            f"{self.STAGE_NAME}: "
             f"session_id={self._session_state.session_id}, "
             f"animal_name={self._animal_state.name}, "
             f"animal_level={self._animal_state.level}, "
@@ -92,4 +88,4 @@ class GNGSiDVisualDelayStage:
 
     @property
     def condition(self) -> "ScheduleCondition | None":
-        self._stage_config.condition
+        return self._stage_config.condition

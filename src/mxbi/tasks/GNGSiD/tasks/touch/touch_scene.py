@@ -3,12 +3,12 @@ from math import ceil
 from tkinter import CENTER, Canvas, Event
 from typing import TYPE_CHECKING, Final
 
-from mxbi.tasks.GNGSiD.models import Result, TouchPoistion
-from mxbi.tasks.GNGSiD.tasks.detect_touch_to_reward.models import (
+from mxbi.tasks.GNGSiD.models import Result, TouchEvent
+from mxbi.tasks.GNGSiD.tasks.touch.touch_models import (
     TrialData,
 )
 from mxbi.utils.aplayer import ToneConfig
-from mxbi.utils.scene_utils import create_circle
+from mxbi.tasks.GNGSiD.tasks.utils.targets import DetectTarget
 
 if TYPE_CHECKING:
     from concurrent.futures import Future
@@ -18,11 +18,11 @@ if TYPE_CHECKING:
 
     from mxbi.models.animal import AnimalState
     from mxbi.models.session import ScreenConfig
-    from mxbi.tasks.GNGSiD.tasks.detect_touch_to_reward.models import TrialConfig
+    from mxbi.tasks.GNGSiD.tasks.touch.touch_models import TrialConfig
     from mxbi.theater import Theater
 
 
-class GNGSiDDetectTouchToRewardScene:
+class GNGSiDTouchScene:
     def __init__(
         self,
         theater: "Theater",
@@ -33,7 +33,7 @@ class GNGSiDDetectTouchToRewardScene:
         self._theater: "Final[Theater]" = theater
         self._animal_state: "Final[AnimalState]" = animal_state
         self._screen_type: "Final[ScreenConfig]" = screen_type
-        self._trial_config = trial_config
+        self._trial_config: "Final[TrialConfig]" = trial_config
 
         self._tone = self._prepare_stimulus()
 
@@ -59,56 +59,44 @@ class GNGSiDDetectTouchToRewardScene:
         self._init_data()
 
     def _on_inter_trial(self) -> None:
-        self._backgroud.after(
+        self._background.after(
             self._trial_config.inter_trial_interval, self._on_trial_end
         )
 
     def _on_trial_end(self) -> None:
-        self._backgroud.destroy()
+        self._background.destroy()
         self._theater.root.quit()
 
     # endregion
 
     # region views
     def _create_view(self) -> None:
-        self._backgroud = Canvas(
+        self._create_background()
+        self._create_target()
+
+    def _create_background(self) -> None:
+        self._background = Canvas(
             self._theater.root,
             bg="black",
             width=self._screen_type.width,
             height=self._screen_type.height,
             highlightthickness=0,
         )
-        self._backgroud.place(relx=0.5, rely=0.5, anchor="center")
+        self._background.place(relx=0.5, rely=0.5, anchor="center")
 
-        self._trigger_canvas = Canvas(
-            self._backgroud,
-            width=self._trial_config.stimulation_size,
-            height=self._trial_config.stimulation_size,
-            bg="lightgray",
-            highlightthickness=0,
-        )
-
-        # TODO: figure out magic number
+    def _create_target(self) -> None:
         xshift = 240
         xcenter = self._screen_type.width * 0.5 + xshift
         ycenter = self._screen_type.height * 0.5
 
-        # TODO: figure out migic number
-        circle_config = [(2.1, "#616161"), (3.1, "#bababa"), (6.3, "white")]
-        for i in circle_config:
-            create_circle(
-                self._trial_config.stimulation_size / 2,
-                self._trial_config.stimulation_size / 2,
-                self._trial_config.stimulation_size / i[0],
-                self._trigger_canvas,
-                i[1],
-            )
-
+        self._trigger_canvas = DetectTarget(
+            self._background, self._trial_config.stimulation_size
+        )
         self._trigger_canvas.place(x=xcenter, y=ycenter, anchor="center")
 
     def _create_wrong_view(self) -> None:
         self._trigger_canvas = Canvas(
-            self._backgroud,
+            self._background,
             bg="grey",
             width=self._screen_type.width,
             height=self._screen_type.height,
@@ -120,12 +108,12 @@ class GNGSiDDetectTouchToRewardScene:
     # region event binding
     def _bind_events(self) -> None:
         # Manual reward
-        self._backgroud.focus_set()
-        self._backgroud.bind("<r>", lambda e: self._give_reward())
+        self._background.focus_set()
+        self._background.bind("<r>", lambda e: self._give_reward())
 
         # Trigger event
-        self._backgroud.bind("<ButtonPress>", self._on_incorrect)
-        self._trigger_canvas.bind("<ButtonPress>", self._on_correct)
+        self._background.bind("<ButtonPress>", self._on_background_touched)
+        self._trigger_canvas.bind("<ButtonPress>", self._on_touched)
 
         # Timeout event
         self._trigger_canvas.after(self._trial_config.time_out, self._on_timeout)
@@ -133,30 +121,41 @@ class GNGSiDDetectTouchToRewardScene:
     # endregion
 
     # region event handlers
-    def _on_correct(self, event: Event) -> None:
+    def _on_touched(self, event: Event) -> None:
+        self._data.touch_events.append(
+            TouchEvent(time=datetime.now().timestamp(), x=event.x, y=event.y)
+        )
+        self._background.unbind("<ButtonPress>")
+        self._trigger_canvas.destroy()
+
         future = self._give_stimulus()
         future.add_done_callback(self._on_stimulus_complete)
 
-        self._backgroud.unbind("<ButtonPress>")
+    def _on_background_touched(self, event: Event) -> None:
+        self._data.touch_events.append(
+            TouchEvent(time=datetime.now().timestamp(), x=event.x, y=event.y)
+        )
+        self._background.unbind("<ButtonPress>")
         self._trigger_canvas.destroy()
 
-        self._data.trial_touched_time = datetime.now().timestamp()
+        self._on_incorrect()
+        
+    def _on_correct(self) -> None:
+        self._give_reward()
         self._data.result = Result.CORRECT
-        self._data.correct_rate = self._animal_state.correct_trial + 1 / (
+        self._data.correct_rate = (self._animal_state.correct_trial + 1) / (
             self._animal_state.current_level_trial_id + 1
         )
-        self._data.touched_coordinate = TouchPoistion(x=event.x, y=event.y)
 
-    def _on_incorrect(self, event: Event) -> None:
-        self._data.trial_touched_time = datetime.now().timestamp()
+        self._on_inter_trial()
+
+    def _on_incorrect(self) -> None:
         self._data.result = Result.INCORRECT
         self._data.correct_rate = self._animal_state.correct_trial / (
             self._animal_state.current_level_trial_id + 1
         )
-        self._data.touched_coordinate = TouchPoistion(x=event.x, y=event.y)
 
         self._create_wrong_view()
-
         self._on_inter_trial()
 
     def _on_timeout(self) -> None:
@@ -166,27 +165,27 @@ class GNGSiDDetectTouchToRewardScene:
         )
 
         self._create_wrong_view()
-
         self._on_inter_trial()
 
     # endregion
 
     # region sitimulus and reward
     def _prepare_stimulus(self) -> "NDArray[int16]":
-        cycle = (
-            self._trial_config.stimulus_duration_single
-            + self._trial_config.stimulus_interval
+        unit_duration = (
+            self._trial_config.stimulus_freq_duration
+            + self._trial_config.stimulus_freq_duration
         )
-        repeat = ceil(self._trial_config.stimulus_duration_total / cycle)
-        repeat = max(repeat, 1)
+
+        times = ceil(self._trial_config.stimulus_duration / unit_duration)
+        times = max(times, 1)
 
         freq_1 = ToneConfig(
-            frequency=self._trial_config.stimulus_frequency,
-            duration=self._trial_config.stimulus_duration_single,
+            frequency=self._trial_config.stimulus_freq,
+            duration=self._trial_config.stimulus_freq_duration,
         )
         freq_2 = ToneConfig(frequency=0, duration=self._trial_config.stimulus_interval)
 
-        return self._theater.aplayer.generate_tone([freq_1, freq_2], repeat)
+        return self._theater.aplayer.generate_tone([freq_1, freq_2], times)
 
     def _give_stimulus(self) -> "Future[bool]":
         return self._theater.aplayer.play(self._tone)
@@ -195,7 +194,7 @@ class GNGSiDDetectTouchToRewardScene:
         if future.result():
             self._trigger_canvas.after(
                 self._trial_config.reward_delay,
-                lambda: (self._give_reward(), self._on_inter_trial()),
+                lambda: (self._on_correct()),
             )
 
     def _give_reward(self) -> None:
@@ -211,11 +210,10 @@ class GNGSiDDetectTouchToRewardScene:
             current_level_trial_id=self._animal_state.current_level_trial_id,
             trial_config=self._trial_config,
             trial_start_time=datetime.now().timestamp(),
-            trial_touched_time=0,
             trial_end_time=0,
             result=Result.TIMEOUT,
             correct_rate=0,
-            touched_coordinate=TouchPoistion(x=0, y=0),
+            touch_events=[],
         )
 
     # endregion

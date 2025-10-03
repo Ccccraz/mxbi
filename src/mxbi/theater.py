@@ -8,6 +8,7 @@ from mxbi.models.session import SessionConfig, SessionState
 from mxbi.scheduler import Scheduler
 from mxbi.utils.detect_platform import Platform
 from mxbi.utils.rewarder.rewarder import PumpTable, Rewarder
+from mxbi.utils.aplayer import APlayer
 
 
 class Theater:
@@ -25,6 +26,7 @@ class Theater:
         self._on_quit: list[Callable[[], None]] = []
 
         self._rewarder = self._init_rewarder()
+        self._aplayer = APlayer()
 
         # init theater
         self._init_tk()
@@ -55,7 +57,7 @@ class Theater:
         self._root.title("mxbi")
         self._root.geometry(f"{screen_type.width}x{screen_type.height}")
 
-        self._root.after(1000, lambda: self._root.attributes("-fullscreen", True))
+        self._root.after(1000, lambda: self._root.attributes("-fullscreen", False))
 
     def _bind_event(self) -> None:
         self._root.bind("<Escape>", self._quit)
@@ -73,6 +75,10 @@ class Theater:
     @property
     def reward(self) -> Rewarder:
         return self._rewarder
+
+    @property
+    def aplayer(self) -> APlayer:
+        return self._aplayer
 
     def mainloop(self):
         self._root.mainloop()

@@ -1,0 +1,67 @@
+{
+    "default": {
+        "condition": {
+            "level_count": 3,
+            "evaluation_interval": 20,
+            "difficulty_increase_threshold": 0.8,
+            "difficulty_decrease_threshold": 0.45,
+            "next_task": "idel"
+        },
+        "params": {
+            "level": 0,
+            "stimulation_size": 250,
+            "visual_stimulus_delay": 500,
+            "min_stimulus_duration": 2500,
+            "max_stimulus_duration": 6500,
+            "silence_time_interval": 2000,
+            "stimulus_configs": [
+                {
+                    "stimulus_freq_high": 2640,
+                    "stimulus_freq_high_duration": 200,
+                    "stimulus_freq_low": 1760,
+                    "stimulus_freq_low_duration": 200
+                },
+                {
+                    "stimulus_freq_high": 5920,
+                    "stimulus_freq_high_duration": 200,
+                    "stimulus_freq_low": 3950,
+                    "stimulus_freq_low_duration": 200
+                },
+                {
+                    "stimulus_freq_high": 7000,
+                    "stimulus_freq_high_duration": 200,
+                    "stimulus_freq_low": 4700,
+                    "stimulus_freq_low_duration": 200
+                }
+            ],
+            "stimulus_interval": 130,
+            "time_out": 10000,
+            "inter_trial_interval": 2000,
+            "reward_duration": 1000,
+            "reward_delay": 500,
+            "attention_duration": 2800
+        },
+        "levels_table": {
+            "0": {
+                "level": 0,
+                "go_task_prob": 0.2,
+                "nogo_task_prob": 0.8
+            },
+            "1": {
+                "level": 1,
+                "go_task_prob": 0.3,
+                "nogo_task_prob": 0.7
+            },
+            "2": {
+                "level": 2,
+                "go_task_prob": 0.4,
+                "nogo_task_prob": 0.6
+            },
+            "3": {
+                "level": 3,
+                "go_task_prob": 0.5,
+                "nogo_task_prob": 0.5
+            }
+        }
+    }
+}

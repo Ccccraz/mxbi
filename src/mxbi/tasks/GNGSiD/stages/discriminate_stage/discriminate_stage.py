@@ -1,22 +1,12 @@
 from typing import TYPE_CHECKING, Final
-from random import choices
+from random import choices, choice, randint
 
 from mxbi.data_logger import DataLogger
 from mxbi.models.animal import ScheduleCondition
 from mxbi.tasks.GNGSiD.models import Result
-from mxbi.tasks.GNGSiD.stages.double_touch_introduce_stage.models import config
-from mxbi.tasks.GNGSiD.tasks.detect_double_touch.models import (
-    TrialConfig as DoubleTouchTrialConfig,
-)
-from mxbi.tasks.GNGSiD.tasks.detect_double_touch.scene import (
-    GNGSiDDetectDoubleTouchScene,
-)
-from mxbi.tasks.GNGSiD.tasks.detect_single_touch.models import (
-    TrialConfig as WithoutTouchToRewardTrialConfig,
-)
-from mxbi.tasks.GNGSiD.tasks.detect_single_touch.scene import (
-    GNGSiDDetectSingleTouchScene,
-)
+from mxbi.tasks.GNGSiD.stages.discriminate_stage.discriminate_stage_models import config
+from mxbi.tasks.GNGSiD.tasks.discriminate.discriminate_models import TrialConfig
+from mxbi.tasks.GNGSiD.tasks.discriminate.discriminate_scene import GNGSiDDiscriminateScene
 from mxbi.utils.logger import logger
 
 if TYPE_CHECKING:
@@ -26,8 +16,8 @@ if TYPE_CHECKING:
     from mxbi.theater import Theater
 
 
-class GNGSiDDoubleTouchIntroduceStage:
-    STAGE_NAME: Final[str] = "GNGSiD_double_touch_introduce_stage"
+class GNGSiDDiscriminateStage:
+    STAGE_NAME: Final[str] = "GNGSiD_DISCRIMINATE_STAGE"
 
     def __init__(
         self,
@@ -42,28 +32,35 @@ class GNGSiDDoubleTouchIntroduceStage:
         _fixed_config = self._stage_config.params
         _levels_config = self._stage_config.levels_table[animal_state.level]
 
-        is_double_touch = choices(
-            [False, True],
-            weights=[
-                _levels_config.single_touch_prob,
-                _levels_config.double_touch_prob,
-            ],
+        _stimulus_config = choice(_fixed_config.stimulus_configs)
+        _stimulus_duration = randint(_fixed_config.min_stimulus_duration, _fixed_config.max_stimulus_duration)
+
+        _is_go = choices(
+            [True, False],
+            weights=[_levels_config.go_task_prob, _levels_config.nogo_task_prob],
         )[0]
 
-        if is_double_touch:
-            _config = DoubleTouchTrialConfig(
-                **{**_fixed_config.model_dump(), **_levels_config.model_dump()}
-            )
-            self._task = GNGSiDDetectDoubleTouchScene(
-                theater, animal_state, session_state.session_config.screen_type, _config
-            )
-        else:
-            _config = WithoutTouchToRewardTrialConfig(
-                **{**_fixed_config.model_dump(), **_levels_config.model_dump()}
-            )
-            self._task = GNGSiDDetectSingleTouchScene(
-                theater, animal_state, session_state.session_config.screen_type, _config
-            )
+        _config = TrialConfig(
+            level=_levels_config.level,
+            stimulation_size=_fixed_config.stimulation_size,
+            stimulus_duration=_stimulus_duration,
+            time_out=_fixed_config.time_out,
+            inter_trial_interval=_fixed_config.inter_trial_interval,
+            reward_duration=_fixed_config.reward_duration,
+            reward_delay=_fixed_config.reward_delay,
+            go=_is_go,
+            visual_stimulus_delay=_fixed_config.visual_stimulus_delay,
+            attention_duration=_fixed_config.attention_duration,
+            stimulus_freq_low=_stimulus_config.stimulus_freq_low,
+            stimulus_freq_low_duration=_stimulus_config.stimulus_freq_low_duration,
+            stimulus_freq_high=_stimulus_config.stimulus_freq_high,
+            stimulus_freq_high_duration=_stimulus_config.stimulus_freq_high_duration,
+            stimulus_interval=_fixed_config.stimulus_interval,
+        )
+
+        self._task = GNGSiDDiscriminateScene(
+            theater, animal_state, session_state.session_config.screen_type, _config
+        )
 
         self._data_logger = DataLogger(
             self._session_state, self._animal_state.name, self.STAGE_NAME
@@ -75,7 +72,7 @@ class GNGSiDDoubleTouchIntroduceStage:
 
         feedback = self._handle_result(trial_data.result)
         logger.debug(
-            f"Size Reduction Stage: "
+            f"{self.STAGE_NAME}: "
             f"session_id={self._session_state.session_id}, "
             f"animal_name={self._animal_state.name}, "
             f"animal_level={self._animal_state.level}, "
@@ -111,4 +108,4 @@ class GNGSiDDoubleTouchIntroduceStage:
 
     @property
     def condition(self) -> "ScheduleCondition | None":
-        self._stage_config.condition
+        return self._stage_config.condition
