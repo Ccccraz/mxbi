@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict, PrivateAttr
 
 from mxbi.models.animal import AnimalState
 from mxbi.models.task import TaskEnum
-from mxbi.tasks.task import Task
+from mxbi.tasks.task_protocol import Task
 
 
 class ScheduleRunningStateEnum(Enum):

@@ -1,22 +1,13 @@
 from typing import TYPE_CHECKING, Final
-from random import choices
+from random import choices, randint
 
 from mxbi.data_logger import DataLogger
 from mxbi.models.animal import ScheduleCondition
 from mxbi.tasks.GNGSiD.models import Result
-from mxbi.tasks.GNGSiD.stages.final_stage.models import config
-from mxbi.tasks.GNGSiD.tasks.frequency_discrimination_double_touch.models import (
-    TrialConfig as DoubleTouchTrialConfig,
-)
-from mxbi.tasks.GNGSiD.tasks.frequency_discrimination_double_touch.scene import (
-    GNGSiDFrequencyDiscriminationDoubleTouchScene,
-)
-from mxbi.tasks.GNGSiD.tasks.frequency_discrimination_single_touch.models import (
-    TrialConfig as SingleTouchTrialConfig,
-)
-from mxbi.tasks.GNGSiD.tasks.frequency_discrimination_single_touch.scene import (
-    GNGSiDFrequencyDiscriminationSingleTouchScene,
-)
+from mxbi.tasks.GNGSiD.stages.detect_stage.detect_stage_models import config
+from mxbi.tasks.GNGSiD.tasks.detect.models import TrialConfig
+from mxbi.tasks.GNGSiD.tasks.detect.scene import GNGSiDDetectScene
+
 from mxbi.utils.logger import logger
 
 if TYPE_CHECKING:
@@ -26,8 +17,8 @@ if TYPE_CHECKING:
     from mxbi.theater import Theater
 
 
-class GNGSiDFinalStage:
-    STAGE_NAME: Final[str] = "GNGSiD_final_stage"
+class GNGSiDDetectStage:
+    STAGE_NAME: Final[str] = "GNGSiD_DETECT_STAGE"
 
     def __init__(
         self,
@@ -39,25 +30,37 @@ class GNGSiDFinalStage:
         self._animal_state = animal_state
 
         self._stage_config = config.root["default"]
+        _fixed_config = self._stage_config.params
+        _levels_config = self._stage_config.levels_table[animal_state.level]
 
-        is_double_touch = choices(
-            [False, True],
-            weights=[
-                self._stage_config.params.single_touch_prob,
-                self._stage_config.params.double_touch_prob,
-            ],
+        _is_go = choices(
+            [True, False],
+            weights=[_levels_config.go_task_prob, _levels_config.nogo_task_prob],
         )[0]
 
-        if is_double_touch:
-            _config = DoubleTouchTrialConfig(**self._stage_config.params.model_dump())
-            self._task = GNGSiDFrequencyDiscriminationDoubleTouchScene(
-                theater, animal_state, session_state.session_config.screen_type, _config
-            )
-        else:
-            _config = SingleTouchTrialConfig(**self._stage_config.params.model_dump())
-            self._task = GNGSiDFrequencyDiscriminationSingleTouchScene(
-                theater, animal_state, session_state.session_config.screen_type, _config
-            )
+        _stimulus_duration = randint(
+            _levels_config.min_stimulus_duration,
+            _levels_config.max_stimulus_duration,
+        )
+
+        _config = TrialConfig(
+            level=_levels_config.level,
+            stimulation_size=_fixed_config.stimulation_size,
+            stimulus_duration=_stimulus_duration,
+            time_out=_fixed_config.time_out,
+            inter_trial_interval=_fixed_config.inter_trial_interval,
+            reward_duration=_fixed_config.reward_duration,
+            reward_delay=_fixed_config.reward_delay,
+            go=_is_go,
+            visual_stimulus_delay=_fixed_config.visual_stimulus_delay,
+            stimulus_freq=_fixed_config.stimulus_freq,
+            stimulus_freq_duration=_fixed_config.stimulus_freq_duration,
+            stimulus_interval=_fixed_config.stimulus_interval,
+        )
+
+        self._task = GNGSiDDetectScene(
+            theater, animal_state, session_state.session_config.screen_type, _config
+        )
 
         self._data_logger = DataLogger(
             self._session_state, self._animal_state.name, self.STAGE_NAME
@@ -69,7 +72,7 @@ class GNGSiDFinalStage:
 
         feedback = self._handle_result(trial_data.result)
         logger.debug(
-            f"Size Reduction Stage: "
+            f"{self.STAGE_NAME}: "
             f"session_id={self._session_state.session_id}, "
             f"animal_name={self._animal_state.name}, "
             f"animal_level={self._animal_state.level}, "
@@ -105,4 +108,4 @@ class GNGSiDFinalStage:
 
     @property
     def condition(self) -> "ScheduleCondition | None":
-        self._stage_config.condition
+        return self._stage_config.condition

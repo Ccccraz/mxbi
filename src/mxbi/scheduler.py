@@ -6,7 +6,7 @@ from mxbi.config import session_config
 from mxbi.models.animal import AnimalState
 from mxbi.models.scheduler import SchedulerState, ScheduleRunningStateEnum
 from mxbi.models.task import TaskEnum
-from mxbi.tasks.task import Task
+from mxbi.tasks.task_protocol import Task
 from mxbi.tasks.task_table import task_table
 from mxbi.utils.logger import logger
 
@@ -85,6 +85,7 @@ class Scheduler:
         task = task_class(self._theater, self._theater._session_state, monkey_state)
 
         monkey_state.condition = task.condition
+        logger.info(f"condition: {task.condition}")
 
         return task
 
@@ -152,7 +153,11 @@ class Scheduler:
             logger.debug(f"Increasing difficulty to level {state.level}")
         else:
             state.task = state.condition.next_task
+            state.level = 0
+
         state.reset()
+
+        session_config.value.animals[state.name].task = state.task
         session_config.save()
 
     def _decrease_difficulty(self, state: "AnimalState") -> None:

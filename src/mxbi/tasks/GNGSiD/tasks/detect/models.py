@@ -2,10 +2,13 @@ from mxbi.tasks.GNGSiD.models import BaseTrialConfig, BaseTrialData
 
 
 class TrialConfig(BaseTrialConfig):
-    min_stimulus_duration: int
-    max_stimulus_duration: int
-    freq_match: tuple[tuple[int, int], tuple[int, int], tuple[int, int]]
-    sound_attention_duration: int
+    go: bool
+    visual_stimulus_delay: int
+
+    stimulus_freq: int
+    stimulus_freq_duration: int
+
+    stimulus_interval: int
 
 
 class TrialData(BaseTrialData):

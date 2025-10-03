@@ -12,13 +12,18 @@ CONFIG_PATH = Path(__file__).parent / "config.json"
 class SizeReductionStageParameters(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    stimulus_frequency: int
-    time_out: int
-    stimulus_duration_total: int
-    stimulus_duration_single: int
+    # audio stimulation config
+    stimulus_duration: int
+    stimulus_freq: int
+    stimulus_freq_duration: int
     stimulus_interval: int
-    reward_duration: int
+
+    # trial lifecycle
+    time_out: int
     inter_trial_interval: int
+
+    # reward config
+    reward_duration: int
 
 
 class SizeReductionStageLeveledParameters(BaseModel):
