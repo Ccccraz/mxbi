@@ -29,6 +29,16 @@ class APlayer:
         )
 
         tone: NDArray[np.float64] = np.sin(2 * np.pi * frequency * t)
+        fade_samples = int(4.5 * SAMPLE_RATE / 1000)
+        samples = len(tone)
+
+        fade_samples = min(fade_samples, samples // 2)
+
+        envelope = np.ones(samples)
+        envelope[:fade_samples] = np.linspace(0, 1, fade_samples)
+        envelope[-fade_samples:] = np.linspace(1, 0, fade_samples)
+
+        tone = tone * envelope
 
         max_val = np.iinfo(np.int16).max
 
@@ -87,36 +97,37 @@ class APlayer:
 if __name__ == "__main__":
     player = APlayer()
 
-    freq_1 = ToneConfig(frequency=1000, duration=200)
-    freq_2 = ToneConfig(frequency=2000, duration=400)
-    freq_3 = ToneConfig(frequency=3000, duration=100)
-    count = 5
+    freq_1 = ToneConfig(frequency=1000, duration=100)
+    count = 1
 
-    tone_s = player.generate_tone([freq_1, freq_2, freq_3], count)
+    tone_s = player.generate_tone([freq_1], count)
 
     player._play(tone_s)
     import matplotlib.pyplot as plt
 
-    configs = [freq_1, freq_2, freq_3] * count
-    times = []
-    freqs = []
+    fig, ax = plt.subplots(figsize=(12, 4))
 
-    cur_t = 0
-    for cfg in configs:
-        times.extend([cur_t, cur_t + cfg.duration])
-        freqs.extend([cfg.frequency, cfg.frequency])
-        cur_t += cfg.duration
+    normalized_tone = tone_s / np.iinfo(np.int16).max
 
-    fig, ax = plt.subplots()
-    ax.step(times, freqs, where="post")
+    time_axis = np.linspace(0, len(tone_s) / SAMPLE_RATE * 1000, len(tone_s))
 
-    ax.set_ylim(-2000, 6000)
-    ax.set_ylabel("Frequency (Hz)")
+    ax.plot(time_axis, normalized_tone)
 
+    ax.set_title(
+        f"Waveform - Frequency: {freq_1.frequency}Hz, Duration: {freq_1.duration}ms"
+    )
     ax.set_xlabel("Time (ms)")
-    ax.set_xticks(np.arange(0, cur_t + 1, 200))
+    ax.set_ylabel("Amplitude")
+    ax.grid(True)
 
-    plt.xticks(rotation=45)
+    ax.text(
+        0.02,
+        0.95,
+        f"Frequency: {freq_1.frequency}Hz",
+        transform=ax.transAxes,
+        bbox=dict(facecolor="white", alpha=0.8),
+        verticalalignment="top",
+    )
+
     plt.tight_layout()
-    plt.grid()
     plt.show()
