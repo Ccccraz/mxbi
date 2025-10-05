@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING, Final
+from random import choice
 
 from mxbi.data_logger import DataLogger
 from mxbi.models.animal import ScheduleCondition
@@ -7,6 +8,7 @@ from mxbi.tasks.GNGSiD.stages.size_reduction_stage.size_reduction_models import 
 from mxbi.tasks.GNGSiD.tasks.touch.touch_models import TrialConfig
 from mxbi.tasks.GNGSiD.tasks.touch.touch_scene import GNGSiDTouchScene
 from mxbi.utils.logger import logger
+from mxbi.utils.audio_control import get_amp_value
 
 if TYPE_CHECKING:
     from mxbi.models.animal import AnimalState
@@ -31,8 +33,23 @@ class SizeReductionStage:
         _fixed_config = self._stage_config.params
         _levels_config = self._stage_config.levels_table[animal_state.level]
 
+        master_amp, digital_amp = self._prepare_stimulus_intensity(
+            self._animal_state.name, _fixed_config.stimulus_freq
+        )
+
         _config = TrialConfig(
-            **{**_fixed_config.model_dump(), **_levels_config.model_dump()}
+            level=_levels_config.level,
+            stimulation_size=_levels_config.stimulation_size,
+            stimulus_duration=_fixed_config.stimulus_duration,
+            time_out=_fixed_config.time_out,
+            inter_trial_interval=_fixed_config.inter_trial_interval,
+            reward_duration=_fixed_config.reward_duration,
+            reward_delay=_levels_config.reward_delay,
+            stimulus_freq=_fixed_config.stimulus_freq,
+            stimulus_freq_duration=_fixed_config.stimulus_freq_duration,
+            stimulus_freq_master_amp=master_amp,
+            stimulus_freq_digital_amp=digital_amp,
+            stimulus_interval=_fixed_config.stimulus_interval,
         )
 
         self._data_logger = DataLogger(
@@ -41,6 +58,7 @@ class SizeReductionStage:
 
         self._task = GNGSiDTouchScene(
             theater,
+            session_state.session_config,
             animal_state,
             session_state.session_config.screen_type,
             _config,
@@ -89,3 +107,12 @@ class SizeReductionStage:
     @property
     def condition(self) -> "ScheduleCondition | None":
         return self._stage_config.condition
+
+    def _prepare_stimulus_intensity(self, monkey: str, frequency: int):
+        bt = choice(([[10, 30], [50, 70]])) if monkey == "wolfgang" else []
+        at = [80, 80, 80] if monkey == "wolfgang" else [80, 80, 80]
+        intensity_options = at * 10 + bt
+
+        stimulus_intensity = choice(intensity_options)
+
+        return get_amp_value(frequency, stimulus_intensity)

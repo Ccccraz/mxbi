@@ -9,8 +9,12 @@ class TrialConfig(BaseTrialConfig):
 
     stimulus_freq_high: int
     stimulus_freq_high_duration: int
+    stimulus_freq_high_master_amp: int
+    stimulus_freq_high_digital_amp: int
     stimulus_freq_low: int
     stimulus_freq_low_duration: int
+    stimulus_freq_low_master_amp: int
+    stimulus_freq_low_digital_amp: int
     stimulus_interval: int
 
 

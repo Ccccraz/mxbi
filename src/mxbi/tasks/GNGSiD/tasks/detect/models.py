@@ -7,6 +7,8 @@ class TrialConfig(BaseTrialConfig):
 
     stimulus_freq: int
     stimulus_freq_duration: int
+    stimulus_freq_master_amp: int
+    stimulus_freq_digital_amp: int
 
     stimulus_interval: int
 
