@@ -48,5 +48,11 @@ class SizeReductionStageConfigs(RootModel):
 
     root: dict[MonkeyName, SizeReductionStageConfig]
 
+def load_config() -> SizeReductionStageConfigs:
+    configs = Configure(CONFIG_PATH, SizeReductionStageConfigs).value
+    for config in configs.root.values():
+        config.condition.level_count = len(config.levels_table)
+    return configs
 
-config = Configure(CONFIG_PATH, SizeReductionStageConfigs).value
+
+config = load_config()
