@@ -40,9 +40,12 @@ class GNGSiDDiscriminateStage:
             _fixed_config.min_stimulus_duration, _fixed_config.max_stimulus_duration
         )
 
-        _is_go = choices(
+        _is_stimulus_trial = choices(
             [True, False],
-            weights=[_levels_config.go_task_prob, _levels_config.nogo_task_prob],
+            weights=[
+                _levels_config.stimulus_trial_prob,
+                _levels_config.nostimulus_trial_prob,
+            ],
         )[0]
 
         _high_master_amp, _high_digital_amp = self._prepare_stimulus_intensity(
@@ -60,8 +63,11 @@ class GNGSiDDiscriminateStage:
             inter_trial_interval=_fixed_config.inter_trial_interval,
             reward_duration=_fixed_config.reward_duration,
             reward_delay=_fixed_config.reward_delay,
-            go=_is_go,
+            is_stimulus_trial=_is_stimulus_trial,
             visual_stimulus_delay=_fixed_config.visual_stimulus_delay,
+            medium_reward_duration=_fixed_config.medium_reward_duration,
+            medium_reward_threshold=_fixed_config.medium_reward_threshold,
+            low_reward_duration=_fixed_config.low_reward_duration,
             attention_duration=_fixed_config.attention_duration,
             stimulus_freq_low=_stimulus_config.stimulus_freq_low,
             stimulus_freq_low_duration=_stimulus_config.stimulus_freq_low_duration,
@@ -72,6 +78,7 @@ class GNGSiDDiscriminateStage:
             stimulus_freq_high_master_amp=_high_master_amp,
             stimulus_freq_high_digital_amp=_high_digital_amp,
             stimulus_interval=_fixed_config.stimulus_interval,
+            extra_response_time=_fixed_config.extra_response_time,
         )
 
         self._task = GNGSiDDiscriminateScene(
@@ -131,10 +138,6 @@ class GNGSiDDiscriminateStage:
         return self._stage_config.condition
 
     def _prepare_stimulus_intensity(self, monkey: str, frequency: int):
-        bt = choice(([[10, 30], [50, 70]])) if monkey == "wolfgang" else []
-        at = [80, 80, 80] if monkey == "wolfgang" else [80, 80, 80]
-        intensity_options = at * 10 + bt
-
-        stimulus_intensity = choice(intensity_options)
+        stimulus_intensity = choice([55, 60, 65, 70, 75])
 
         return get_amp_value(frequency, stimulus_intensity)

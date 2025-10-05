@@ -23,12 +23,17 @@ class DiscriminateStageParams(BaseModel):
     stimulation_size: int
     visual_stimulus_delay: int
 
+    # dynamic reward config
+    medium_reward_duration: int
+    medium_reward_threshold: int
+    low_reward_duration: int
+
     # audio stimulation config
     min_stimulus_duration: int
     max_stimulus_duration: int
-    silence_time_interval: int
     stimulus_configs: list[stimulus_config]
     stimulus_interval: int
+    extra_response_time: int
 
     # trial lifecycle
     time_out: int
@@ -46,8 +51,8 @@ class DiscriminateStageLeveledParams(BaseModel):
 
     level: int
 
-    go_task_prob: float
-    nogo_task_prob: float
+    stimulus_trial_prob: float
+    nostimulus_trial_prob: float
 
 
 class DiscriminateStageConfig(BaseModel):
