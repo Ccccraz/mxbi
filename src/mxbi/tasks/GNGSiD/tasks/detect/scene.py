@@ -208,10 +208,10 @@ class GNGSiDDetectScene:
         )
         freq_2 = ToneConfig(frequency=0, duration=self._trial_config.stimulus_interval)
 
-        return self._theater.aplayer.generate_tone([freq_1, freq_2], repeat)
+        return self._theater.aplayer.generate_stimulus([freq_1, freq_2], repeat)
 
     def _give_stimulus(self, tone: "NDArray[int16]") -> "Future[bool]":
-        return self._theater.aplayer.play(tone)
+        return self._theater.aplayer.play_stimulus(tone)
 
     def _on_stimulus_complete(self, future: "Future[bool]") -> None:
         if future.result():

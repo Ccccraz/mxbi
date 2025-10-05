@@ -194,10 +194,10 @@ class GNGSiDTouchScene:
         )
         freq_2 = ToneConfig(frequency=0, duration=self._trial_config.stimulus_interval)
 
-        return self._theater.aplayer.generate_tone([freq_1, freq_2], times)
+        return self._theater.aplayer.generate_stimulus([freq_1, freq_2], times)
 
     def _give_stimulus(self) -> "Future[bool]":
-        return self._theater.aplayer.play(self._tone)
+        return self._theater.aplayer.play_stimulus(self._tone)
 
     def _on_stimulus_complete(self, future: "Future[bool]") -> None:
         if future.result():

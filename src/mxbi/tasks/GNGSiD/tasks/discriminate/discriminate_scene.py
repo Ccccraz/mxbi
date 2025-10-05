@@ -10,7 +10,7 @@ from mxbi.tasks.GNGSiD.tasks.discriminate.discriminate_models import (
     TrialData,
 )
 from mxbi.tasks.GNGSiD.tasks.utils.targets import DiscriminateTarget
-from mxbi.utils.aplayer import StimulusUnit, StimulusUnitConfig
+from mxbi.utils.aplayer import StimulusSequenceUnit
 from mxbi.utils.detect_platform import Platform
 
 if TYPE_CHECKING:
@@ -44,20 +44,20 @@ class GNGSiDDiscriminateScene:
         self._trial_config: Final[TrialConfig] = trial_config
         self._is_go_trial: bool = bool(trial_config.go)
 
-        attentation_unit = StimulusUnitConfig(
-            freq=trial_config.stimulus_freq_low,
+        attentation_unit = StimulusSequenceUnit(
+            frequency=trial_config.stimulus_freq_low,
             duration=trial_config.stimulus_freq_low_duration,
             interval=trial_config.stimulus_interval,
         )
 
-        high_unit = StimulusUnitConfig(
-            freq=trial_config.stimulus_freq_high,
+        high_unit = StimulusSequenceUnit(
+            frequency=trial_config.stimulus_freq_high,
             duration=trial_config.stimulus_freq_high_duration,
             interval=trial_config.stimulus_interval,
         )
 
-        low_unit = StimulusUnitConfig(
-            freq=trial_config.stimulus_freq_low,
+        low_unit = StimulusSequenceUnit(
+            frequency=trial_config.stimulus_freq_low,
             duration=trial_config.stimulus_freq_low_duration,
             interval=trial_config.stimulus_interval,
         )
@@ -243,14 +243,14 @@ class GNGSiDDiscriminateScene:
 
     # region stimulus and reward
     def _prepare_stimulus(
-        self, stimulus_configs: list[StimulusUnitConfig], total_duration: int
-    ) -> list[StimulusUnit]:
+        self, stimulus_units: list[StimulusSequenceUnit], total_duration: int
+    ) -> list[StimulusSequenceUnit]:
         return self._theater.aplayer.generate_stimulus_sequence(
-            stimulus_configs, total_duration
+            stimulus_units, total_duration
         )
 
-    def _give_stimulus(self, stimulus_units: list[StimulusUnit]) -> "Future[bool]":
-        return self._theater.aplayer.play_with_amp(stimulus_units)
+    def _give_stimulus(self, stimulus_units: list[StimulusSequenceUnit]) -> "Future[bool]":
+        return self._theater.aplayer.play_stimulus_sequence(stimulus_units)
 
     def _give_reward(self) -> None:
         self._theater.reward.give_reward(self._trial_config.reward_duration)
