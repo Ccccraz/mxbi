@@ -1,5 +1,7 @@
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
+from mxbi.data_logger import DataLogger
 from mxbi.animal_detector.animal_detector import AnimalDetector, DetectorEvent
 from mxbi.animal_detector.debug_detector import DebugDetector
 from mxbi.config import session_config
@@ -13,6 +15,11 @@ from mxbi.utils.logger import logger
 if TYPE_CHECKING:
     from mxbi.models.task import Feedback
     from mxbi.theater import Theater
+
+
+class SchedulerEvent(StrEnum):
+    TASK_SWITCH = "task_switch"
+    LEVEL_CHANGE = "level_change"
 
 
 class Scheduler:
@@ -33,6 +40,10 @@ class Scheduler:
             animal_state=None,
         )
         self._state.current_task = None
+
+        self._scheduler_logger = DataLogger(
+            self._theater._session_state, "scheduler", "scheduler"
+        )
 
         self._bind_events()
 
@@ -94,6 +105,9 @@ class Scheduler:
         if condition is None or condition.config.next_task is None:
             logger.warning("Manual advance requested but no next task is defined.")
         else:
+            previous_task = self._state.animal_state.task
+            previous_level = self._state.animal_state.level
+
             self._state.animal_state.task = condition.config.next_task
             self._state.animal_state.level = 0
             self._state.animal_state.reset()
@@ -103,6 +117,9 @@ class Scheduler:
             ].task = self._state.animal_state.task
 
             session_config.save()
+            self._log_task_switch(self._state.animal_state, previous_task)
+            if previous_level != self._state.animal_state.level:
+                self._log_level_change(self._state.animal_state, previous_level)
 
     def _on_manual_next_level(self, _) -> None:
         if not self._state.running:
@@ -222,6 +239,9 @@ class Scheduler:
         if state.condition is None:
             return
 
+        previous_task = state.task
+        previous_level = state.level
+
         if state.level < state.condition.level_count - 1:
             state.level += 1
             logger.debug(f"Increasing difficulty to level {state.level}")
@@ -245,9 +265,14 @@ class Scheduler:
                 state.name,
             )
         session_config.save()
+        if state.task != previous_task:
+            self._log_task_switch(state, previous_task)
+        elif state.level != previous_level:
+            self._log_level_change(state, previous_level)
 
     def _decrease_difficulty(self, state: AnimalState) -> None:
         if state.level > 0:
+            previous_level = state.level
             state.level -= 1
             state.reset()
             animal_config = session_config.value.animals.get(state.name)
@@ -259,6 +284,7 @@ class Scheduler:
                     state.name,
                 )
             session_config.save()
+            self._log_level_change(state, previous_level)
 
     def _on_animal_entered(self, animal_name: str) -> None:
         self._state.animal_state = self._get_animal_state(animal_name)
@@ -292,6 +318,46 @@ class Scheduler:
         self._state.state = ScheduleRunningStateEnum.ERROR
         if self._state.current_task is not None:
             self._state.current_task.quit()
+
+    def _log_task_switch(self, animal_state: AnimalState, previous_task: TaskEnum) -> None:
+        if animal_state.task == previous_task:
+            return
+
+        record = self._build_history_record(SchedulerEvent.TASK_SWITCH, animal_state)
+        record["previous_task"] = previous_task.name
+
+        self._save_history_record(record)
+
+    def _log_level_change(self, animal_state: AnimalState, previous_level: int) -> None:
+        if animal_state.level == previous_level:
+            return
+
+        record = self._build_history_record(SchedulerEvent.LEVEL_CHANGE, animal_state)
+        record["previous_level"] = previous_level
+
+        self._save_history_record(record)
+
+    def _build_history_record(
+        self, event: SchedulerEvent, animal_state: AnimalState
+    ) -> dict[str, object]:
+        return {
+            "event": event.value,
+            "scheduler_state": self._state.state.name,
+            "running": self._state.running,
+            "animal_name": animal_state.name,
+            "task": animal_state.task.name,
+            "level": animal_state.level,
+            "trial_id": animal_state.trial_id,
+            "current_level_trial_id": animal_state.current_level_trial_id,
+            "correct_trial": animal_state.correct_trial,
+            "correct_rate": animal_state.correct_rate,
+        }
+
+    def _save_history_record(self, record: dict[str, object]) -> None:
+        try:
+            self._scheduler_logger.save_jsonl(record)
+        except Exception:
+            logger.exception("Failed to write scheduler history log")
 
 
 if __name__ == "__main__":
