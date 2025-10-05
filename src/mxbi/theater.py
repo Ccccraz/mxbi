@@ -64,7 +64,7 @@ class Theater:
 
     def _quit(self, _: Event) -> None:
         self._session_state.end_time = datetime.now().timestamp()
-        self._session_logger.save_jsonl(self._session_state.model_dump())
+        self._session_logger.save_json(self._session_state.model_dump())
         for callback in self._on_quit:
             callback()
         self._root.destroy()

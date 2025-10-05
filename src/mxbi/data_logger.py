@@ -22,7 +22,7 @@ class DataLogger:
         self._filename = filename
         self._session_id = self.__session_state.session_id
 
-        self.data_file = self._create_data_file()
+        self._data_dir = self._ensure_data_dir()
 
     @staticmethod
     def init_session_id() -> int:
@@ -44,50 +44,55 @@ class DataLogger:
 
         return latest_session_id + 1
 
-    def _create_data_file(self) -> Path:
-        try:
-            filepath = self._gen_data_file_name()
-            filepath.parent.mkdir(parents=True, exist_ok=True)
-            filepath.touch(exist_ok=True)
-
-            return filepath
-
-        except FileExistsError as e:
-            logger.error(f"Data file already exists: {e}")
-            sys.exit(1)
-
-        except Exception as e:
-            logger.error(f"Failed to create data file: {e}")
-            sys.exit(1)
-
-    def _gen_data_file_name(self) -> Path:
+    def _ensure_data_dir(self) -> Path:
         date_path = Path(f"{_now.year}{_now.month:02d}{_now.day:02d}")
         session_path = Path(f"{self._session_id}")
         monkey_path = Path(f"{self._monkey}")
 
-        return (
-            DATA_DIR_PATH
-            / date_path
-            / session_path
-            / monkey_path
-            / f"{self._filename}.jsonl"
-        )
+        base_dir = DATA_DIR_PATH / date_path / session_path / monkey_path
+
+        try:
+            base_dir.mkdir(parents=True, exist_ok=True)
+            return base_dir
+        except Exception as e:
+            logger.error(f"Failed to create data directory: {e}")
+            sys.exit(1)
+
+    def _get_path(self, suffix: str) -> Path:
+        return self._data_dir / f"{self._filename}{suffix}"
 
     def save_jsonl(self, data: dict) -> None:
+        jsonl_path = self._get_path(".jsonl")
         try:
             json_line = json.dumps(data, ensure_ascii=False)
 
-            with open(self.data_file, "a", encoding="utf-8") as f:
+            with open(jsonl_path, "a", encoding="utf-8") as f:
                 f.write(json_line + "\n")
 
         except TypeError as e:
             logger.error(f"Data is not JSON serializable: {e}")
             raise
         except IOError as e:
-            logger.error(f"Failed to write to file {self.data_file}: {e}")
+            logger.error(f"Failed to write to file {jsonl_path}: {e}")
             raise
         except Exception as e:
             logger.error(f"Unexpected error while writing data: {e}")
+            raise
+
+    def save_json(self, data: dict) -> None:
+        json_path = self._get_path(".json")
+        try:
+            json_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(json_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+        except TypeError as e:
+            logger.error(f"Data is not JSON serializable: {e}")
+            raise
+        except IOError as e:
+            logger.error(f"Failed to write to file {json_path}: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error while writing JSON data: {e}")
             raise
 
 
