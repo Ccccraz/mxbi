@@ -33,13 +33,11 @@ class SessionConfig(BaseModel):
 
 
 class SessionState(BaseModel):
-    session_id: int = Field(default=0, frozen=True)
+    session_id: int = 0
     start_time: float = Field(default=0.0, frozen=True)
     end_time: float = 0.0
 
     session_config: SessionConfig = Field(default_factory=SessionConfig, frozen=True)
-
-
 
 
 class SessionOptions(BaseModel):

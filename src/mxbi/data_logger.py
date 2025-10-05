@@ -13,7 +13,6 @@ if TYPE_CHECKING:
 _now = datetime.now()
 
 
-# TODO: The relationship between monkey and session
 class DataLogger:
     def __init__(
         self, session_config: "SessionState", monkey: str, filename: str
@@ -24,6 +23,26 @@ class DataLogger:
         self._session_id = self.__session_state.session_id
 
         self.data_file = self._create_data_file()
+
+    @staticmethod
+    def init_session_id() -> int:
+        now = datetime.now()
+        date_path = Path(f"{now.year}{now.month:02d}{now.day:02d}")
+        base_path = DATA_DIR_PATH / date_path
+
+        if not base_path.exists():
+            return 0
+
+        latest_session_id = max(
+            (
+                int(child.name)
+                for child in base_path.iterdir()
+                if child.is_dir() and child.name.isdigit()
+            ),
+            default=-1,
+        )
+
+        return latest_session_id + 1
 
     def _create_data_file(self) -> Path:
         try:
@@ -43,7 +62,7 @@ class DataLogger:
 
     def _gen_data_file_name(self) -> Path:
         date_path = Path(f"{_now.year}{_now.month:02d}{_now.day:02d}")
-        session_path = Path(f"session_{self._session_id}")
+        session_path = Path(f"{self._session_id}")
         monkey_path = Path(f"{self._monkey}")
 
         return (

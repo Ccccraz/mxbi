@@ -15,7 +15,7 @@ class Theater:
     def __init__(self) -> None:
         self._config = session_config.value
         self._session_state = SessionState(
-            session_id=0,
+            session_id=DataLogger.init_session_id(),
             start_time=datetime.now().timestamp(),
             session_config=self._config,
         )
