@@ -5,21 +5,16 @@ from pydantic import BaseModel
 from concurrent.futures import Future, ThreadPoolExecutor
 from mxbi.utils.audio_control import set_master_volume, set_digital_volume
 from dataclasses import dataclass
+from functools import lru_cache
 from threading import Event
 
 
 @dataclass
-class StimulusUnit:
-    stimulus: NDArray[np.int16]
-    stimulus_master_amp: int | None = None
-    stimulus_digital_amp: int | None = None
-
-
-@dataclass
-class StimulusUnitConfig:
-    freq: int
-    duration: int  # ms
-    interval: int  # ms
+class StimulusSequenceUnit:
+    frequency: int | None = None
+    duration: int | None = None  # ms
+    interval: int = 0  # ms
+    stimulus: NDArray[np.int16] | None = None
     master_volume: int | None = None
     digital_volume: int | None = None
 
@@ -30,6 +25,26 @@ class ToneConfig(BaseModel):
 
 
 SAMPLE_RATE = 44100
+
+
+@lru_cache(maxsize=128)
+def _cached_wave_unit(frequency: int, duration: int) -> NDArray[np.int16]:
+    samples = int(SAMPLE_RATE * (duration / 1000))
+    if samples <= 0:
+        return np.zeros(0, dtype=np.int16)
+
+    t = np.arange(samples) / SAMPLE_RATE
+    tone = np.sin(2 * np.pi * frequency * t)
+
+    fade_samples = min(int(4.5 * SAMPLE_RATE / 1000), samples // 2)
+    if fade_samples > 0:
+        envelope = np.ones(samples)
+        envelope[:fade_samples] = np.linspace(0, 1, fade_samples)
+        envelope[-fade_samples:] = np.linspace(1, 0, fade_samples)
+        tone *= envelope
+
+    max_val = np.iinfo(np.int16).max
+    return (tone * max_val).astype(np.int16)
 
 
 class APlayer:
@@ -44,71 +59,108 @@ class APlayer:
             output=True,
         )
 
-    def _gen_unit(self, tone_config: ToneConfig) -> NDArray[np.int16]:
-        samples = int(SAMPLE_RATE * (tone_config.duration / 1000))
-        if samples <= 0:
-            return np.zeros(0, dtype=np.int16)
+    def _gen_wave_unit(self, tone_config: ToneConfig) -> NDArray[np.int16]:
+        cached = _cached_wave_unit(
+            tone_config.frequency,
+            tone_config.duration,
+        )
+        return cached.copy()
 
-        t = np.arange(samples) / SAMPLE_RATE
-        tone = np.sin(2 * np.pi * tone_config.frequency * t)
+    def _gen_stimulus_unit(self, unit: StimulusSequenceUnit) -> StimulusSequenceUnit:
+        """Ensure a stimulus unit has waveform data while retaining volume metadata."""
+        if unit.stimulus is not None:
+            return StimulusSequenceUnit(
+                frequency=unit.frequency,
+                duration=unit.duration,
+                interval=unit.interval,
+                stimulus=unit.stimulus.copy(),
+                master_volume=unit.master_volume,
+                digital_volume=unit.digital_volume,
+            )
 
-        fade_samples = min(int(4.5 * SAMPLE_RATE / 1000), samples // 2)
-        if fade_samples > 0:
-            envelope = np.ones(samples)
-            envelope[:fade_samples] = np.linspace(0, 1, fade_samples)
-            envelope[-fade_samples:] = np.linspace(1, 0, fade_samples)
-            tone *= envelope
+        if unit.frequency is None or unit.duration is None:
+            raise ValueError("StimulusSequenceUnit requires frequency and duration when stimulus is not provided")
 
-        max_val = np.iinfo(np.int16).max
-        return (tone * max_val).astype(np.int16)
-
-    def generate_tone(
-        self, tone_config: list[ToneConfig], times: int
-    ) -> NDArray[np.int16]:
-        tone_unit = np.concatenate([self._gen_unit(cfg) for cfg in tone_config])
-        return np.tile(tone_unit, times)
-
-    def _build_unit(self, u: StimulusUnitConfig) -> StimulusUnit:
-        tone = self.generate_tone(
+        stimulus = self.generate_stimulus(
             [
-                ToneConfig(frequency=u.freq, duration=u.duration),
-                ToneConfig(frequency=0, duration=u.interval),
+                ToneConfig(frequency=unit.frequency, duration=unit.duration),
+                ToneConfig(frequency=0, duration=unit.interval),
             ],
             1,
         )
-        return StimulusUnit(
-            stimulus=tone,
-            stimulus_master_amp=u.master_volume,
-            stimulus_digital_amp=u.digital_volume,
+        return StimulusSequenceUnit(
+            frequency=unit.frequency,
+            duration=unit.duration,
+            interval=unit.interval,
+            stimulus=stimulus,
+            master_volume=unit.master_volume,
+            digital_volume=unit.digital_volume,
         )
 
+    def generate_stimulus(
+        self, tone_config: list[ToneConfig], times: int
+    ) -> NDArray[np.int16]:
+        """Concatenate the configured tones and repeat them the requested number of times."""
+        tone_unit = np.concatenate([self._gen_wave_unit(cfg) for cfg in tone_config])
+        return np.tile(tone_unit, times)
+
     def generate_stimulus_sequence(
-        self, unit_configs: list[StimulusUnitConfig], duration: int
-    ) -> list[StimulusUnit]:
-        unit_durations = [u.duration + u.interval for u in unit_configs]
+        self, units: list[StimulusSequenceUnit], duration: int
+    ) -> list[StimulusSequenceUnit]:
+        """Expand stimulus units to fill the target duration while supporting per-unit volume overrides."""
+        unit_durations: list[int] = []
+        for unit in units:
+            if unit.duration is not None:
+                unit_durations.append(unit.duration + unit.interval)
+            elif unit.stimulus is not None:
+                unit_ms = int(len(unit.stimulus) / SAMPLE_RATE * 1000)
+                unit_durations.append(unit_ms)
+            else:
+                raise ValueError(
+                    "StimulusSequenceUnit must define duration or stimulus before sequencing"
+                )
+
         cycle_duration = sum(unit_durations)
 
         k, r = divmod(duration, cycle_duration)
 
-        sequence = [self._build_unit(u) for _ in range(k) for u in unit_configs]
+        sequence = [self._gen_stimulus_unit(u) for _ in range(k) for u in units]
 
-        for u, dur in zip(unit_configs, unit_durations):
+        for unit, dur in zip(units, unit_durations):
             if r >= dur:
                 r -= dur
-                sequence.append(self._build_unit(u))
+                sequence.append(self._gen_stimulus_unit(unit))
             else:
                 break
 
         return sequence
 
-    def _play(self, tones: list[StimulusUnit]) -> bool:
+    def _play_stimulus(self, stimulus: "NDArray[np.int16]"):
+        """Internal helper for playback when no per-tone volume changes are needed."""
+        data = stimulus.tobytes()
+        chunk_size = 1024
+
+        offset = 0
+        while chunk := data[offset : offset + chunk_size]:
+            if self._stop_event.is_set():
+                self._stop_event.clear()
+                return False
+
+            self._stream.write(chunk)
+            offset += chunk_size
+
+        self._stop_event.clear()
+        return True
+
+    def _play_stimulus_sequence(self, tones: list[StimulusSequenceUnit]) -> bool:
+        """Internal helper that applies volume overrides before each stimulus unit."""
         for tone in tones:
-            if (
-                tone.stimulus_master_amp is not None
-                and tone.stimulus_digital_amp is not None
-            ):
-                set_master_volume(tone.stimulus_master_amp)
-                set_digital_volume(tone.stimulus_digital_amp)
+            if tone.master_volume is not None and tone.digital_volume is not None:
+                set_master_volume(tone.master_volume)
+                set_digital_volume(tone.digital_volume)
+
+            if tone.stimulus is None:
+                continue
 
             data = tone.stimulus.tobytes()
             chunk_size = 1024
@@ -116,19 +168,24 @@ class APlayer:
             offset = 0
             while chunk := data[offset : offset + chunk_size]:
                 if self._stop_event.is_set():
+                    self._stop_event.clear()
                     return False
 
                 self._stream.write(chunk)
                 offset += chunk_size
 
+        self._stop_event.clear()
         return True
 
-    def play(self, tone: NDArray[np.int16]) -> Future[bool]:
-        return self._executor.submit(self._play, [StimulusUnit(stimulus=tone)])
-
-    def play_with_amp(self, tones: list[StimulusUnit]) -> Future[bool]:
+    def play_stimulus(self, stimulus: NDArray[np.int16]) -> Future[bool]:
+        """Play a single stimulus without adjusting system volume between tones."""
         self._stop_event.clear()
-        return self._executor.submit(self._play, tones)
+        return self._executor.submit(self._play_stimulus, stimulus)
+
+    def play_stimulus_sequence(self, tones: list[StimulusSequenceUnit]) -> Future[bool]:
+        """Play a sequence and update master/digital volume before each unit if provided."""
+        self._stop_event.clear()
+        return self._executor.submit(self._play_stimulus_sequence, tones)
 
     def stop(self) -> None:
         self._stop_event.set()
@@ -145,34 +202,68 @@ if __name__ == "__main__":
     freq_1 = ToneConfig(frequency=1000, duration=100)
     count = 1
 
-    tone_s = player.generate_tone([freq_1], count)
+    tone_s = player.generate_stimulus([freq_1], count)
 
-    player._play([StimulusUnit(stimulus=tone_s)])
+    sequence_units = [
+        StimulusSequenceUnit(frequency=2000, duration=100, interval=200),
+        StimulusSequenceUnit(frequency=1000, duration=100, interval=200),
+    ]
+    sequence = player.generate_stimulus_sequence(sequence_units, duration=1201)
+
+    player._play_stimulus_sequence([StimulusSequenceUnit(stimulus=tone_s)])
+    player._play_stimulus_sequence(sequence)
+
     import matplotlib.pyplot as plt
 
-    fig, ax = plt.subplots(figsize=(12, 4))
+    fig, axes = plt.subplots(2, 1, figsize=(12, 6))
 
     normalized_tone = tone_s / np.iinfo(np.int16).max
-
     time_axis = np.linspace(0, len(tone_s) / SAMPLE_RATE * 1000, len(tone_s))
-
-    ax.plot(time_axis, normalized_tone)
-
-    ax.set_title(
-        f"Waveform - Frequency: {freq_1.frequency}Hz, Duration: {freq_1.duration}ms"
+    axes[0].plot(time_axis, normalized_tone)
+    axes[0].set_title(
+        f"Single Stimulus - {freq_1.frequency}Hz, {freq_1.duration}ms"
     )
-    ax.set_xlabel("Time (ms)")
-    ax.set_ylabel("Amplitude")
-    ax.grid(True)
+    axes[0].set_xlim(0, freq_1.duration)
+    axes[0].set_ylabel("Amplitude")
+    axes[0].grid(True)
 
-    ax.text(
-        0.02,
-        0.95,
-        f"Frequency: {freq_1.frequency}Hz",
-        transform=ax.transAxes,
-        bbox=dict(facecolor="white", alpha=0.8),
-        verticalalignment="top",
+    stacked_sequence = np.concatenate(
+        [unit.stimulus for unit in sequence if unit.stimulus is not None]
     )
+    normalized_sequence = stacked_sequence / np.iinfo(np.int16).max
+    sequence_time_axis = np.linspace(
+        0, len(stacked_sequence) / SAMPLE_RATE * 1000, len(stacked_sequence)
+    )
+    axes[1].plot(sequence_time_axis, normalized_sequence)
+    axes[1].set_title("Alternating Tone Blocks: 2000Hz ↔ 1000Hz")
+    axes[1].set_xlabel("Time (ms)")
+    axes[1].set_ylabel("Amplitude")
+    axes[1].grid(True)
+
+    block_edges: list[tuple[float, float, int | None]] = []
+    cursor = 0.0
+    for unit in sequence:
+        if unit.stimulus is None:
+            continue
+        block_duration_ms = len(unit.stimulus) / SAMPLE_RATE * 1000
+        block_edges.append((cursor, cursor + block_duration_ms, unit.frequency))
+        cursor += block_duration_ms
+
+    for start, end, freq in block_edges:
+        axes[1].axvline(start, color="grey", linestyle="--", alpha=0.5)
+        midpoint = (start + end) / 2
+        label = f"{freq or 0}Hz"
+        axes[1].annotate(
+            label,
+            xy=(midpoint, 0.8),
+            xycoords=("data", "axes fraction"),
+            ha="center",
+            va="center",
+            fontsize=10,
+            bbox=dict(facecolor="white", alpha=0.7, edgecolor="none"),
+        )
+    axes[1].axvline(cursor, color="grey", linestyle="--", alpha=0.5)
+    axes[1].set_xlim(0, cursor)
 
     plt.tight_layout()
     plt.show()
