@@ -2,10 +2,15 @@ from mxbi.tasks.GNGSiD.models import BaseTrialConfig, BaseTrialData
 
 
 class TrialConfig(BaseTrialConfig):
-    go: bool
+    is_stimulus_trial: bool
     visual_stimulus_delay: int
 
+    medium_reward_duration: int
+    medium_reward_threshold: int
+    low_reward_duration: int
+
     attention_duration: int
+    extra_response_time: int
 
     stimulus_freq_high: int
     stimulus_freq_high_duration: int

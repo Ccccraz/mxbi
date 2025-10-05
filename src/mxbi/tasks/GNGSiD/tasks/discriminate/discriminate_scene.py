@@ -3,7 +3,6 @@ from datetime import datetime
 from tkinter import CENTER, Canvas, Event
 from typing import TYPE_CHECKING, Final
 
-
 from mxbi.tasks.GNGSiD.models import Result, TouchEvent
 from mxbi.tasks.GNGSiD.tasks.discriminate.discriminate_models import (
     TrialConfig,
@@ -18,15 +17,6 @@ if TYPE_CHECKING:
     from mxbi.models.session import ScreenConfig, SessionConfig
     from mxbi.theater import Theater
 
-from dataclasses import dataclass
-
-
-@dataclass
-class Unit:
-    freq: int
-    dur: int
-    inteval: int
-
 
 class GNGSiDDiscriminateScene:
     def __init__(
@@ -34,64 +24,56 @@ class GNGSiDDiscriminateScene:
         theater: "Theater",
         session_config: "SessionConfig",
         animal_state: "AnimalState",
-        screen_tupe: "ScreenConfig",
+        screen_type: "ScreenConfig",
         trial_config: "TrialConfig",
     ) -> None:
+        # Track shared dependencies and trial configuration
         self._theater: Final[Theater] = theater
         self._session_config = session_config
         self._animal_state: Final[AnimalState] = animal_state
-        self._screen_type: Final[ScreenConfig] = screen_tupe
+        self._screen_type: Final[ScreenConfig] = screen_type
         self._trial_config: Final[TrialConfig] = trial_config
-        self._is_go_trial: bool = bool(trial_config.go)
 
-        attentation_unit = StimulusSequenceUnit(
+        # Build stimulus units for attention, high, and low tones
+        attention_unit = self._build_stimulus_unit(
             frequency=trial_config.stimulus_freq_low,
             duration=trial_config.stimulus_freq_low_duration,
-            interval=trial_config.stimulus_interval,
+            master_volume=trial_config.stimulus_freq_low_master_amp,
+            digital_volume=trial_config.stimulus_freq_low_digital_amp,
         )
-
-        high_unit = StimulusSequenceUnit(
+        high_unit = self._build_stimulus_unit(
             frequency=trial_config.stimulus_freq_high,
             duration=trial_config.stimulus_freq_high_duration,
-            interval=trial_config.stimulus_interval,
+            master_volume=trial_config.stimulus_freq_high_master_amp,
+            digital_volume=trial_config.stimulus_freq_high_digital_amp,
         )
-
-        low_unit = StimulusSequenceUnit(
+        low_unit = self._build_stimulus_unit(
             frequency=trial_config.stimulus_freq_low,
             duration=trial_config.stimulus_freq_low_duration,
-            interval=trial_config.stimulus_interval,
+            master_volume=trial_config.stimulus_freq_low_master_amp,
+            digital_volume=trial_config.stimulus_freq_low_digital_amp,
         )
 
-        if session_config.platform == Platform.RASPBERRY:
-            attentation_unit.master_volume = (
-                self._trial_config.stimulus_freq_low_master_amp
-            )
-            attentation_unit.digital_volume = (
-                self._trial_config.stimulus_freq_low_digital_amp
-            )
-
-            high_unit.master_volume = self._trial_config.stimulus_freq_high_master_amp
-            high_unit.digital_volume = self._trial_config.stimulus_freq_high_digital_amp
-
-            low_unit.master_volume = self._trial_config.stimulus_freq_low_master_amp
-            low_unit.digital_volume = self._trial_config.stimulus_freq_low_digital_amp
-
-        self._attentation_stimulus = self._prepare_stimulus(
-            [attentation_unit], trial_config.attention_duration
+        # Pre-compute the stimuli sequences and timing values used in the trial
+        self._attention_stimulus = self._prepare_stimulus(
+            [attention_unit], trial_config.attention_duration
         )
 
-        print(len(self._attentation_stimulus))
+        # Calculate total response duration including stimulus duration and extra response time
+        self._response_duration = (
+            self._trial_config.stimulus_duration
+            + self._trial_config.extra_response_time
+        )
 
-        if self._is_go_trial:
-            self._stimulus = self._prepare_stimulus(
-                [high_unit, low_unit],
-                self._trial_config.stimulus_duration,
-            )
+        self._reward_duration = self._trial_config.reward_duration
+
+        if trial_config.is_stimulus_trial:
+            stimulus_units = [high_unit, low_unit]
         else:
-            self._stimulus = self._prepare_stimulus(
-                [attentation_unit],
-                self._trial_config.stimulus_duration,
-            )
+            stimulus_units = [attention_unit]
+        self._stimulus = self._prepare_stimulus(
+            stimulus_units, self._trial_config.stimulus_duration
+        )
 
         self._on_trial_start()
 
@@ -114,12 +96,12 @@ class GNGSiDDiscriminateScene:
         self._bind_first_stage()
 
     def _on_inter_trial(self) -> None:
-        self._backgroud.after(
+        self._background.after(
             self._trial_config.inter_trial_interval, self._on_trial_end
         )
 
     def _on_trial_end(self) -> None:
-        self._backgroud.destroy()
+        self._background.destroy()
         self._theater.root.quit()
 
     # endregion
@@ -130,28 +112,28 @@ class GNGSiDDiscriminateScene:
         self._create_target()
 
     def _create_background(self) -> None:
-        self._backgroud = Canvas(
+        self._background = Canvas(
             self._theater.root,
             bg="black",
             width=self._screen_type.width,
             height=self._screen_type.height,
             highlightthickness=0,
         )
-        self._backgroud.place(relx=0.5, rely=0.5, anchor="center")
+        self._background.place(relx=0.5, rely=0.5, anchor="center")
 
     def _create_target(self) -> None:
-        xshift = 240
-        xcenter = self._screen_type.width * 0.5 + xshift
-        ycenter = self._screen_type.height * 0.5
+        x_shift = 240
+        x_center = self._screen_type.width * 0.5 + x_shift
+        y_center = self._screen_type.height * 0.5
 
         self._trigger_canvas = DiscriminateTarget(
-            self._backgroud, self._trial_config.stimulation_size
+            self._background, self._trial_config.stimulation_size
         )
-        self._trigger_canvas.place(x=xcenter, y=ycenter, anchor="center")
+        self._trigger_canvas.place(x=x_center, y=y_center, anchor="center")
 
     def _create_wrong_view(self) -> None:
         self._trigger_canvas = Canvas(
-            self._backgroud,
+            self._background,
             bg="grey",
             width=self._screen_type.width,
             height=self._screen_type.height,
@@ -162,17 +144,21 @@ class GNGSiDDiscriminateScene:
 
     # region event binding
     def _bind_first_stage(self) -> None:
-        self._backgroud.focus_set()
-        self._backgroud.bind("<r>", lambda e: self._give_reward())
+        self._background.focus_set()
+        self._background.bind("<r>", lambda e: self._give_reward())
         self._trigger_canvas.bind("<ButtonPress>", self._on_first_touched)
         self._trigger_canvas.after(self._trial_config.time_out, self._on_timeout)
 
     def _bind_second_stage(self) -> None:
+        self._reward_duration = self._trial_config.reward_duration
         self._trigger_canvas.bind("<ButtonPress>", self._on_second_touched)
-        timeout_handler = self._on_incorrect if self._is_go_trial else self._on_correct
-        self._trigger_canvas.after(
-            self._trial_config.stimulus_duration, timeout_handler
-        )
+        if self._trial_config.is_stimulus_trial:
+            self._trigger_canvas.after(self._response_duration, self._on_incorrect)
+            self._schedule_reward_adjustments()
+        else:
+            self._trigger_canvas.after(
+                self._trial_config.stimulus_duration, self._on_correct
+            )
 
     # endregion
 
@@ -180,21 +166,24 @@ class GNGSiDDiscriminateScene:
     def _on_first_touched(self, event: Event) -> None:
         self._trigger_canvas.destroy()
         self._record_touch(event)
-        future = self._give_stimulus(self._attentation_stimulus)
+        future = self._give_stimulus(self._attention_stimulus)
         future.add_done_callback(self._start_stimulus_stage)
 
-    def _start_stimulus_stage(self, f: Future) -> None:
-        if f.result():
-            self._give_stimulus(self._stimulus)
-            self._backgroud.after(
-                0, lambda: (self._create_target(), self._bind_second_stage())
-            )
+    def _start_stimulus_stage(self, future: Future) -> None:
+        if not future.result():
+            return
+        self._give_stimulus(self._stimulus)
+        self._background.after(0, self._prepare_second_stage)
+
+    def _prepare_second_stage(self) -> None:
+        self._create_target()
+        self._bind_second_stage()
 
     def _on_second_touched(self, event: Event) -> None:
         self._trigger_canvas.destroy()
         self._record_touch(event)
 
-        if self._is_go_trial:
+        if self._trial_config.is_stimulus_trial:
             self._on_correct()
         else:
             self._on_incorrect()
@@ -211,7 +200,7 @@ class GNGSiDDiscriminateScene:
         self._theater.aplayer.stop()
         self._trigger_canvas.destroy()
 
-        self._backgroud.after(self._trial_config.reward_delay, self._give_reward)
+        self._background.after(self._trial_config.reward_delay, self._give_reward)
         self._data.result = Result.CORRECT
         self._data.correct_rate = (self._animal_state.correct_trial + 1) / (
             self._animal_state.current_level_trial_id + 1
@@ -242,6 +231,33 @@ class GNGSiDDiscriminateScene:
     # endregion
 
     # region stimulus and reward
+    def _build_stimulus_unit(
+        self,
+        *,
+        frequency: int,
+        duration: int,
+        master_volume: int,
+        digital_volume: int,
+    ) -> StimulusSequenceUnit:
+        unit = StimulusSequenceUnit(
+            frequency=frequency,
+            duration=duration,
+            interval=self._trial_config.stimulus_interval,
+        )
+        self._configure_unit_volume(unit, master_volume, digital_volume)
+        return unit
+
+    def _configure_unit_volume(
+        self,
+        unit: StimulusSequenceUnit,
+        master_volume: int,
+        digital_volume: int,
+    ) -> None:
+        if self._session_config.platform != Platform.RASPBERRY:
+            return
+        unit.master_volume = master_volume
+        unit.digital_volume = digital_volume
+
     def _prepare_stimulus(
         self, stimulus_units: list[StimulusSequenceUnit], total_duration: int
     ) -> list[StimulusSequenceUnit]:
@@ -249,11 +265,28 @@ class GNGSiDDiscriminateScene:
             stimulus_units, total_duration
         )
 
-    def _give_stimulus(self, stimulus_units: list[StimulusSequenceUnit]) -> "Future[bool]":
+    def _give_stimulus(
+        self, stimulus_units: list[StimulusSequenceUnit]
+    ) -> "Future[bool]":
         return self._theater.aplayer.play_stimulus_sequence(stimulus_units)
 
     def _give_reward(self) -> None:
-        self._theater.reward.give_reward(self._trial_config.reward_duration)
+        self._theater.reward.give_reward(self._reward_duration)
+
+    def _schedule_reward_adjustments(self) -> None:
+        self._background.after(
+            self._trial_config.medium_reward_threshold,
+            self._adjust_reward_duration,
+            self._trial_config.medium_reward_duration,
+        )
+        self._background.after(
+            self._trial_config.stimulus_duration,
+            self._adjust_reward_duration,
+            self._trial_config.low_reward_duration,
+        )
+
+    def _adjust_reward_duration(self, duration: int) -> None:
+        self._reward_duration = duration
 
     # endregion
 
