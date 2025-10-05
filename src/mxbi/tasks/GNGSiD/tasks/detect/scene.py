@@ -3,11 +3,12 @@ from math import ceil
 from tkinter import CENTER, Canvas, Event
 from typing import TYPE_CHECKING, Final
 
-from mxbi.models.session import ScreenConfig
 from mxbi.tasks.GNGSiD.models import Result, TouchEvent
 from mxbi.tasks.GNGSiD.tasks.detect.models import TrialConfig, TrialData
 from mxbi.tasks.GNGSiD.tasks.utils.targets import DetectTarget
 from mxbi.utils.aplayer import ToneConfig
+from mxbi.utils.detect_platform import Platform
+from mxbi.utils.audio_control import set_master_volume, set_digital_volume
 
 if TYPE_CHECKING:
     from concurrent.futures import Future
@@ -16,6 +17,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from mxbi.models.animal import AnimalState
+    from mxbi.models.session import ScreenConfig, SessionConfig
     from mxbi.theater import Theater
 
 
@@ -23,17 +25,21 @@ class GNGSiDDetectScene:
     def __init__(
         self,
         theater: "Theater",
+        session_config: "SessionConfig",
         animal_state: "AnimalState",
         screen_type: "ScreenConfig",
         trial_config: "TrialConfig",
     ) -> None:
-        self._theater: Final[Theater] = theater
-        self._animal_state: Final[AnimalState] = animal_state
-        self._screen_type: Final[ScreenConfig] = screen_type
-        self._trial_config: Final[TrialConfig] = trial_config
+        self._theater: "Final[Theater]" = theater
+        self._animal_state: "Final[AnimalState]" = animal_state
+        self._screen_type: "Final[ScreenConfig]" = screen_type
+        self._trial_config: "Final[TrialConfig]" = trial_config
         self._is_go_trial: bool = bool(trial_config.go)
 
         self._tone: Final[NDArray[int16]] = self._prepare_stimulus()
+
+        if session_config.platform == Platform.RASPBERRY:
+            self._set_stimulus_intensity()
 
         self._on_trial_start()
 
@@ -213,6 +219,10 @@ class GNGSiDDetectScene:
 
     def _give_reward(self, _=None) -> None:
         self._theater.reward.give_reward(self._trial_config.reward_duration)
+
+    def _set_stimulus_intensity(self) -> None:
+        set_master_volume(self._trial_config.stimulus_freq_master_amp)
+        set_digital_volume(self._trial_config.stimulus_freq_digital_amp)
 
     # endregion
 

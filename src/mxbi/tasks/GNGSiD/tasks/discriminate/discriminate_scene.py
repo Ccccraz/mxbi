@@ -1,58 +1,95 @@
 from concurrent.futures import Future
 from datetime import datetime
-from math import ceil
 from tkinter import CENTER, Canvas, Event
 from typing import TYPE_CHECKING, Final
 
-from mxbi.models.session import ScreenConfig
+
 from mxbi.tasks.GNGSiD.models import Result, TouchEvent
-from mxbi.tasks.GNGSiD.tasks.discriminate.discriminate_models import TrialConfig, TrialData
+from mxbi.tasks.GNGSiD.tasks.discriminate.discriminate_models import (
+    TrialConfig,
+    TrialData,
+)
 from mxbi.tasks.GNGSiD.tasks.utils.targets import DiscriminateTarget
-from mxbi.utils.aplayer import ToneConfig
+from mxbi.utils.aplayer import StimulusUnit, StimulusUnitConfig
+from mxbi.utils.detect_platform import Platform
 
 if TYPE_CHECKING:
-    from numpy import int16
-    from numpy.typing import NDArray
-
     from mxbi.models.animal import AnimalState
+    from mxbi.models.session import ScreenConfig, SessionConfig
     from mxbi.theater import Theater
+
+from dataclasses import dataclass
+
+
+@dataclass
+class Unit:
+    freq: int
+    dur: int
+    inteval: int
 
 
 class GNGSiDDiscriminateScene:
     def __init__(
         self,
         theater: "Theater",
+        session_config: "SessionConfig",
         animal_state: "AnimalState",
         screen_tupe: "ScreenConfig",
         trial_config: "TrialConfig",
     ) -> None:
         self._theater: Final[Theater] = theater
+        self._session_config = session_config
         self._animal_state: Final[AnimalState] = animal_state
         self._screen_type: Final[ScreenConfig] = screen_tupe
         self._trial_config: Final[TrialConfig] = trial_config
         self._is_go_trial: bool = bool(trial_config.go)
 
-        self._attentation_stimulus = self._prepare_stimulus(
-            trial_config.stimulus_freq_low,
-            trial_config.stimulus_freq_low_duration,
-            0,
-            trial_config.stimulus_interval,
-            trial_config.attention_duration,
+        attentation_unit = StimulusUnitConfig(
+            freq=trial_config.stimulus_freq_low,
+            duration=trial_config.stimulus_freq_low_duration,
+            interval=trial_config.stimulus_interval,
         )
+
+        high_unit = StimulusUnitConfig(
+            freq=trial_config.stimulus_freq_high,
+            duration=trial_config.stimulus_freq_high_duration,
+            interval=trial_config.stimulus_interval,
+        )
+
+        low_unit = StimulusUnitConfig(
+            freq=trial_config.stimulus_freq_low,
+            duration=trial_config.stimulus_freq_low_duration,
+            interval=trial_config.stimulus_interval,
+        )
+
+        if session_config.platform == Platform.RASPBERRY:
+            attentation_unit.master_volume = (
+                self._trial_config.stimulus_freq_low_master_amp
+            )
+            attentation_unit.digital_volume = (
+                self._trial_config.stimulus_freq_low_digital_amp
+            )
+
+            high_unit.master_volume = self._trial_config.stimulus_freq_high_master_amp
+            high_unit.digital_volume = self._trial_config.stimulus_freq_high_digital_amp
+
+            low_unit.master_volume = self._trial_config.stimulus_freq_low_master_amp
+            low_unit.digital_volume = self._trial_config.stimulus_freq_low_digital_amp
+
+        self._attentation_stimulus = self._prepare_stimulus(
+            [attentation_unit], trial_config.attention_duration
+        )
+
+        print(len(self._attentation_stimulus))
+
         if self._is_go_trial:
             self._stimulus = self._prepare_stimulus(
-                self._trial_config.stimulus_freq_low,
-                self._trial_config.stimulus_freq_low_duration,
-                self._trial_config.stimulus_freq_high,
-                self._trial_config.stimulus_freq_high_duration,
+                [high_unit, low_unit],
                 self._trial_config.stimulus_duration,
             )
         else:
             self._stimulus = self._prepare_stimulus(
-                self._trial_config.stimulus_freq_low,
-                self._trial_config.stimulus_freq_low_duration,
-                0,
-                self._trial_config.stimulus_interval,
+                [attentation_unit],
                 self._trial_config.stimulus_duration,
             )
 
@@ -65,6 +102,7 @@ class GNGSiDDiscriminateScene:
 
     def cancle(self) -> None:
         self._data.result = Result.CANCEL
+        self._theater.aplayer.stop()
         self._on_trial_end()
 
     # endregion
@@ -145,11 +183,12 @@ class GNGSiDDiscriminateScene:
         future = self._give_stimulus(self._attentation_stimulus)
         future.add_done_callback(self._start_stimulus_stage)
 
-    def _start_stimulus_stage(self, _f: Future) -> None:
-        self._give_stimulus(self._stimulus)
-        self._backgroud.after(
-            0, lambda: (self._create_target(), self._bind_second_stage())
-        )
+    def _start_stimulus_stage(self, f: Future) -> None:
+        if f.result():
+            self._give_stimulus(self._stimulus)
+            self._backgroud.after(
+                0, lambda: (self._create_target(), self._bind_second_stage())
+            )
 
     def _on_second_touched(self, event: Event) -> None:
         self._trigger_canvas.destroy()
@@ -192,6 +231,7 @@ class GNGSiDDiscriminateScene:
         self._on_inter_trial()
 
     def _on_timeout(self) -> None:
+        self._theater.aplayer.stop()
         self._data.result = Result.TIMEOUT
         self._data.correct_rate = self._animal_state.correct_trial / (
             self._animal_state.current_level_trial_id + 1
@@ -203,23 +243,14 @@ class GNGSiDDiscriminateScene:
 
     # region stimulus and reward
     def _prepare_stimulus(
-        self,
-        freq1: int,
-        dur1: int,
-        freq2: int,
-        dur2: int,
-        total_duration: int,
-    ) -> "NDArray[int16]":
-        cycle = dur1 + dur2
-        repeat = max(ceil(total_duration / cycle), 1)
+        self, stimulus_configs: list[StimulusUnitConfig], total_duration: int
+    ) -> list[StimulusUnit]:
+        return self._theater.aplayer.generate_stimulus_sequence(
+            stimulus_configs, total_duration
+        )
 
-        tone1 = ToneConfig(frequency=freq1, duration=dur1)
-        tone2 = ToneConfig(frequency=freq2, duration=dur2)
-
-        return self._theater.aplayer.generate_tone([tone1, tone2], repeat)
-
-    def _give_stimulus(self, stimulus: "NDArray[int16]") -> "Future[bool]":
-        return self._theater.aplayer.play(stimulus)
+    def _give_stimulus(self, stimulus_units: list[StimulusUnit]) -> "Future[bool]":
+        return self._theater.aplayer.play_with_amp(stimulus_units)
 
     def _give_reward(self) -> None:
         self._theater.reward.give_reward(self._trial_config.reward_duration)

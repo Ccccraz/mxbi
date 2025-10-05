@@ -17,24 +17,24 @@
             "stimulus_configs": [
                 {
                     "stimulus_freq_high": 2640,
-                    "stimulus_freq_high_duration": 200,
+                    "stimulus_freq_high_duration": 100,
                     "stimulus_freq_low": 1760,
-                    "stimulus_freq_low_duration": 200
+                    "stimulus_freq_low_duration": 100
                 },
                 {
                     "stimulus_freq_high": 5920,
-                    "stimulus_freq_high_duration": 200,
+                    "stimulus_freq_high_duration": 100,
                     "stimulus_freq_low": 3950,
-                    "stimulus_freq_low_duration": 200
+                    "stimulus_freq_low_duration": 100
                 },
                 {
                     "stimulus_freq_high": 7000,
-                    "stimulus_freq_high_duration": 200,
+                    "stimulus_freq_high_duration": 100,
                     "stimulus_freq_low": 4700,
-                    "stimulus_freq_low_duration": 200
+                    "stimulus_freq_low_duration": 100
                 }
             ],
-            "stimulus_interval": 130,
+            "stimulus_interval": 200,
             "time_out": 10000,
             "inter_trial_interval": 2000,
             "reward_duration": 1000,
@@ -44,8 +44,8 @@
         "levels_table": {
             "0": {
                 "level": 0,
-                "go_task_prob": 0.2,
-                "nogo_task_prob": 0.8
+                "go_task_prob": 0.8,
+                "nogo_task_prob": 0.2
             },
             "1": {
                 "level": 1,

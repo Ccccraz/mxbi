@@ -7,8 +7,13 @@ from mxbi.tasks.GNGSiD.models import Result, TouchEvent
 from mxbi.tasks.GNGSiD.tasks.touch.touch_models import (
     TrialData,
 )
-from mxbi.utils.aplayer import ToneConfig
 from mxbi.tasks.GNGSiD.tasks.utils.targets import DetectTarget
+from mxbi.utils.aplayer import ToneConfig
+from mxbi.utils.audio_control import (
+    set_digital_volume,
+    set_master_volume,
+)
+from mxbi.utils.detect_platform import Platform
 
 if TYPE_CHECKING:
     from concurrent.futures import Future
@@ -17,7 +22,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from mxbi.models.animal import AnimalState
-    from mxbi.models.session import ScreenConfig
+    from mxbi.models.session import ScreenConfig, SessionConfig
     from mxbi.tasks.GNGSiD.tasks.touch.touch_models import TrialConfig
     from mxbi.theater import Theater
 
@@ -26,6 +31,7 @@ class GNGSiDTouchScene:
     def __init__(
         self,
         theater: "Theater",
+        session: "SessionConfig",
         animal_state: "AnimalState",
         screen_type: "ScreenConfig",
         trial_config: "TrialConfig",
@@ -36,6 +42,9 @@ class GNGSiDTouchScene:
         self._trial_config: "Final[TrialConfig]" = trial_config
 
         self._tone = self._prepare_stimulus()
+
+        if session.platform == Platform.RASPBERRY:
+            self._set_stimulus_intensity()
 
         self._on_trial_start()
 
@@ -139,7 +148,7 @@ class GNGSiDTouchScene:
         self._trigger_canvas.destroy()
 
         self._on_incorrect()
-        
+
     def _on_correct(self) -> None:
         self._give_reward()
         self._data.result = Result.CORRECT
@@ -199,6 +208,10 @@ class GNGSiDTouchScene:
 
     def _give_reward(self) -> None:
         self._theater.reward.give_reward(self._trial_config.reward_duration)
+
+    def _set_stimulus_intensity(self) -> None:
+        set_master_volume(self._trial_config.stimulus_freq_master_amp)
+        set_digital_volume(self._trial_config.stimulus_freq_digital_amp)
 
     # endregion
 

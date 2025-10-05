@@ -6,8 +6,11 @@ from mxbi.models.animal import ScheduleCondition
 from mxbi.tasks.GNGSiD.models import Result
 from mxbi.tasks.GNGSiD.stages.discriminate_stage.discriminate_stage_models import config
 from mxbi.tasks.GNGSiD.tasks.discriminate.discriminate_models import TrialConfig
-from mxbi.tasks.GNGSiD.tasks.discriminate.discriminate_scene import GNGSiDDiscriminateScene
+from mxbi.tasks.GNGSiD.tasks.discriminate.discriminate_scene import (
+    GNGSiDDiscriminateScene,
+)
 from mxbi.utils.logger import logger
+from mxbi.utils.audio_control import get_amp_value
 
 if TYPE_CHECKING:
     from mxbi.models.animal import AnimalState
@@ -33,12 +36,21 @@ class GNGSiDDiscriminateStage:
         _levels_config = self._stage_config.levels_table[animal_state.level]
 
         _stimulus_config = choice(_fixed_config.stimulus_configs)
-        _stimulus_duration = randint(_fixed_config.min_stimulus_duration, _fixed_config.max_stimulus_duration)
+        _stimulus_duration = randint(
+            _fixed_config.min_stimulus_duration, _fixed_config.max_stimulus_duration
+        )
 
         _is_go = choices(
             [True, False],
             weights=[_levels_config.go_task_prob, _levels_config.nogo_task_prob],
         )[0]
+
+        _high_master_amp, _high_digital_amp = self._prepare_stimulus_intensity(
+            animal_state.name, _stimulus_config.stimulus_freq_high
+        )
+        _low_master_amp, _low_digital_amp = self._prepare_stimulus_intensity(
+            animal_state.name, _stimulus_config.stimulus_freq_low
+        )
 
         _config = TrialConfig(
             level=_levels_config.level,
@@ -53,13 +65,21 @@ class GNGSiDDiscriminateStage:
             attention_duration=_fixed_config.attention_duration,
             stimulus_freq_low=_stimulus_config.stimulus_freq_low,
             stimulus_freq_low_duration=_stimulus_config.stimulus_freq_low_duration,
+            stimulus_freq_low_master_amp=_low_master_amp,
+            stimulus_freq_low_digital_amp=_low_digital_amp,
             stimulus_freq_high=_stimulus_config.stimulus_freq_high,
             stimulus_freq_high_duration=_stimulus_config.stimulus_freq_high_duration,
+            stimulus_freq_high_master_amp=_high_master_amp,
+            stimulus_freq_high_digital_amp=_high_digital_amp,
             stimulus_interval=_fixed_config.stimulus_interval,
         )
 
         self._task = GNGSiDDiscriminateScene(
-            theater, animal_state, session_state.session_config.screen_type, _config
+            theater,
+            session_state.session_config,
+            animal_state,
+            session_state.session_config.screen_type,
+            _config,
         )
 
         self._data_logger = DataLogger(
@@ -109,3 +129,12 @@ class GNGSiDDiscriminateStage:
     @property
     def condition(self) -> "ScheduleCondition | None":
         return self._stage_config.condition
+
+    def _prepare_stimulus_intensity(self, monkey: str, frequency: int):
+        bt = choice(([[10, 30], [50, 70]])) if monkey == "wolfgang" else []
+        at = [80, 80, 80] if monkey == "wolfgang" else [80, 80, 80]
+        intensity_options = at * 10 + bt
+
+        stimulus_intensity = choice(intensity_options)
+
+        return get_amp_value(frequency, stimulus_intensity)

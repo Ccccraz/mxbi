@@ -1,5 +1,5 @@
 from typing import TYPE_CHECKING, Final
-from random import choices, randint
+from random import choices, randint, choice
 
 from mxbi.data_logger import DataLogger
 from mxbi.models.animal import ScheduleCondition
@@ -9,6 +9,7 @@ from mxbi.tasks.GNGSiD.tasks.detect.models import TrialConfig
 from mxbi.tasks.GNGSiD.tasks.detect.scene import GNGSiDDetectScene
 
 from mxbi.utils.logger import logger
+from mxbi.utils.audio_control import get_amp_value
 
 if TYPE_CHECKING:
     from mxbi.models.animal import AnimalState
@@ -43,6 +44,10 @@ class GNGSiDDetectStage:
             _levels_config.max_stimulus_duration,
         )
 
+        _master_amp, _digital_amp = self._prepare_stimulus_intensity(
+            self._animal_state.name, _fixed_config.stimulus_freq
+        )
+
         _config = TrialConfig(
             level=_levels_config.level,
             stimulation_size=_fixed_config.stimulation_size,
@@ -55,11 +60,17 @@ class GNGSiDDetectStage:
             visual_stimulus_delay=_fixed_config.visual_stimulus_delay,
             stimulus_freq=_fixed_config.stimulus_freq,
             stimulus_freq_duration=_fixed_config.stimulus_freq_duration,
+            stimulus_freq_master_amp=_master_amp,
+            stimulus_freq_digital_amp=_digital_amp,
             stimulus_interval=_fixed_config.stimulus_interval,
         )
 
         self._task = GNGSiDDetectScene(
-            theater, animal_state, session_state.session_config.screen_type, _config
+            theater,
+            session_state.session_config,
+            animal_state,
+            session_state.session_config.screen_type,
+            _config,
         )
 
         self._data_logger = DataLogger(
@@ -109,3 +120,12 @@ class GNGSiDDetectStage:
     @property
     def condition(self) -> "ScheduleCondition | None":
         return self._stage_config.condition
+
+    def _prepare_stimulus_intensity(self, monkey: str, frequency: int):
+        bt = choice(([[10, 30], [50, 70]])) if monkey == "wolfgang" else []
+        at = [80, 80, 80] if monkey == "wolfgang" else [80, 80, 80]
+        intensity_options = at * 10 + bt
+
+        stimulus_intensity = choice(intensity_options)
+
+        return get_amp_value(frequency, stimulus_intensity)
