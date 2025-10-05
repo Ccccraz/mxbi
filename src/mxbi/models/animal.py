@@ -13,12 +13,16 @@ class AnimalConfig(BaseModel):
     level: int = 0
 
 
-class ScheduleCondition(BaseModel):
-    level_count: int = 0
+class ScheduleConditionConfig(BaseModel):
     evaluation_interval: int = 20
     difficulty_increase_threshold: float = 0.8
     difficulty_decrease_threshold: float = 0.45
-    next_task: TaskEnum = TaskEnum.IDEL
+    next_task: TaskEnum | None = None
+
+
+class ScheduleCondition(BaseModel):
+    level_count: int = 0
+    config: ScheduleConditionConfig
 
 
 class AnimalState(AnimalConfig):

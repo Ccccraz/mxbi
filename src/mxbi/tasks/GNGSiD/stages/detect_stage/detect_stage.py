@@ -4,7 +4,7 @@ from random import choices, randint, choice
 from mxbi.data_logger import DataLogger
 from mxbi.models.animal import ScheduleCondition
 from mxbi.tasks.GNGSiD.models import Result
-from mxbi.tasks.GNGSiD.stages.detect_stage.detect_stage_models import config
+from mxbi.tasks.GNGSiD.stages.detect_stage.detect_stage_models import DetectStageConfig, config
 from mxbi.tasks.GNGSiD.tasks.detect.models import TrialConfig
 from mxbi.tasks.GNGSiD.tasks.detect.scene import GNGSiDDetectScene
 
@@ -30,7 +30,8 @@ class GNGSiDDetectStage:
         self._session_state = session_state
         self._animal_state = animal_state
 
-        self._stage_config = config.root["default"]
+        self._stage_config = self._load_stage_config(animal_state.name)
+
         _fixed_config = self._stage_config.params
         _levels_config = self._stage_config.levels_table[animal_state.level]
 
@@ -93,6 +94,12 @@ class GNGSiDDetectStage:
         )
 
         return feedback
+
+    def _load_stage_config(self, monkey: str) -> DetectStageConfig:
+        stage_config = config.root.get(monkey) or config.root.get("default")
+        if stage_config is None:
+            raise ValueError("No default stage config found")
+        return stage_config
 
     def _handle_result(self, result: "Result") -> "Feedback":
         feedback = False

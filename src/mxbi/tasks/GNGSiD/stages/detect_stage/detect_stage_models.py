@@ -56,4 +56,11 @@ class DetectStageConfigs(RootModel):
     root: dict[MonkeyName, DetectStageConfig]
 
 
-config = Configure(CONFIG_PATH, DetectStageConfigs).value
+def load_config() -> DetectStageConfigs:
+    configs = Configure(CONFIG_PATH, DetectStageConfigs).value
+    for config in configs.root.values():
+        config.condition.level_count = len(config.levels_table)
+    return configs
+
+
+config = load_config()

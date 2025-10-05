@@ -1,11 +1,12 @@
 {
     "default": {
         "condition": {
-            "level_count": 2,
-            "evaluation_interval": 2,
-            "difficulty_increase_threshold": 0.8,
-            "difficulty_decrease_threshold": 0.45,
-            "next_task": "gngsid_discriminate_stage"
+            "config": {
+                "evaluation_interval": 2,
+                "difficulty_increase_threshold": 0.8,
+                "difficulty_decrease_threshold": 0.45,
+                "next_task": "gngsid_discriminate_stage"
+            }
         },
         "params": {
             "stimulation_size": 250,

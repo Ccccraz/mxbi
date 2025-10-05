@@ -1,11 +1,11 @@
 {
     "default": {
         "condition": {
-            "level_count": 3,
-            "evaluation_interval": 20,
-            "difficulty_increase_threshold": 0.8,
-            "difficulty_decrease_threshold": 0.45,
-            "next_task": "idel"
+            "config": {
+                "evaluation_interval": 20,
+                "difficulty_increase_threshold": 0.8,
+                "difficulty_decrease_threshold": 0.45
+            }
         },
         "params": {
             "level": 0,
