@@ -1,10 +1,22 @@
 from mxbi.models.task import TaskEnum
+from mxbi.tasks.default.idle_task.idle_scene import IDLEScene
+from mxbi.tasks.default.initial_habituation_training.initial_habituation_training import (
+    InitialHabituationTraining,
+)
 from mxbi.tasks.GNGSiD.stages.detect_stage.detect_stage import GNGSiDDetectStage
-from mxbi.tasks.GNGSiD.stages.discriminate_stage.discriminate_stage import GNGSiDDiscriminateStage
-from mxbi.tasks.GNGSiD.stages.size_reduction_stage.size_reduction_stage import SizeReductionStage
+from mxbi.tasks.GNGSiD.stages.discriminate_stage.discriminate_stage import (
+    GNGSiDDiscriminateStage,
+)
+from mxbi.tasks.GNGSiD.stages.size_reduction_stage.size_reduction_stage import (
+    SizeReductionStage,
+)
 from mxbi.tasks.task_protocol import Task
+from mxbi.tasks.default.error_task.error_scene import ErrorScene
 
 task_table: dict[TaskEnum, type[Task]] = {
+    TaskEnum.IDEL: IDLEScene,
+    TaskEnum.ERROR: ErrorScene,
+    TaskEnum.HABITUATION: InitialHabituationTraining,
     TaskEnum.GNGSiD_SIZE_REDUCTION_STAGE: SizeReductionStage,
     TaskEnum.GNGSiD_DETECT_STAGE: GNGSiDDetectStage,
     TaskEnum.GNGSiD_DISCRIMINATE_STAGE: GNGSiDDiscriminateStage,

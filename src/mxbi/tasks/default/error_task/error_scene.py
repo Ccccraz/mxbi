@@ -2,8 +2,9 @@ from tkinter import Canvas
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from mxbi.models.animal import AnimalState
+    from mxbi.models.animal import AnimalState, ScheduleCondition
     from mxbi.models.session import SessionState
+    from mxbi.models.task import Feedback
     from mxbi.theater import Theater
 
 
@@ -14,46 +15,39 @@ class ErrorScene:
         session_state: "SessionState",
         animal_state: "AnimalState",
     ) -> None:
-        self.__theater = theater
-        self.__session_config = session_state
-        self.__screen_type = self.__session_config.session_config.screen_type
+        self._theater = theater
+        self._session_config = session_state
+        self._screen_type = self._session_config.session_config.screen_type
 
-        self.__on_trial_start()
+        self._on_trial_start()
 
-    def __on_trial_start(self) -> None:
-        self.__create_objects()
+    def _on_trial_start(self) -> None:
+        self._create_view()
 
-    def __on_trial_end(self) -> None:
-        self.__background.destroy()
-        self.__theater.root.quit()
-
-    def __create_objects(self) -> None:
-        self.__background = Canvas(
-            self.__theater.root,
+    def _create_view(self) -> None:
+        self._background = Canvas(
+            self._theater.root,
             bg="red",
-            width=self.__screen_type.width,
-            height=self.__screen_type.height,
+            width=self._screen_type.width,
+            height=self._screen_type.height,
             highlightthickness=0,
         )
-        self.__background.place(relx=0.5, rely=0.5, anchor="center")
+        self._background.place(relx=0.5, rely=0.5, anchor="center")
 
-    def __on_cancel(self) -> None:
-        self.__on_trial_end()
+    def start(self) -> "Feedback":
+        self._theater.root.mainloop()
 
-    def start(self) -> None:
-        self.__theater.mainloop()
+        return True
 
     def quit(self) -> None:
-        self.__on_cancel()
+        self._background.destroy()
+        self._theater.root.quit()
 
-    def on_idle(self) -> None: ...
-
-    def on_return(self) -> None:
+    def on_idle(self) -> None:
         self.quit()
 
-    @property
-    def feedback(self) -> bool: ...
+    def on_return(self) -> None: ...
 
     @property
-    def condition(self) -> None:
+    def condition(self) -> "ScheduleCondition | None":
         return None
