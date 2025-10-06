@@ -7,6 +7,7 @@ Feedback: TypeAlias = bool
 class TaskEnum(StrEnum):
     IDEL = auto()
     ERROR = auto()
+    HABITUATION = auto()
     GNGSiD_SIZE_REDUCTION_STAGE = auto()
     GNGSiD_DETECT_STAGE = auto()
     GNGSiD_DISCRIMINATE_STAGE = auto()
