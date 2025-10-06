@@ -1,6 +1,8 @@
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
+from pydantic import BaseModel
+
 from mxbi.data_logger import DataLogger
 from mxbi.animal_detector.animal_detector import AnimalDetector, DetectorEvent
 from mxbi.animal_detector.debug_detector import DebugDetector
@@ -20,6 +22,25 @@ if TYPE_CHECKING:
 class SchedulerEvent(StrEnum):
     TASK_SWITCH = "task_switch"
     LEVEL_CHANGE = "level_change"
+    STATE_CHANGE = "state_change"
+
+
+class SchedulerHistoryRecord(BaseModel):
+    event: str
+    scheduler_state: str
+    running: bool
+    animal_name: str | None = None
+    task: str | None = None
+    level: int | None = None
+    trial_id: int | None = None
+    current_level_trial_id: int | None = None
+    correct_trial: int | None = None
+    correct_rate: float | None = None
+    previous_state: str | None = None
+    new_state: str | None = None
+    reason: str | None = None
+    previous_task: str | None = None
+    previous_level: int | None = None
 
 
 class Scheduler:
@@ -178,7 +199,9 @@ class Scheduler:
     def _run_schedule_state(self) -> None:
         animal_state = self._state.animal_state
         if animal_state is None:
-            self._state.state = ScheduleRunningStateEnum.IDLE
+            self._transition_to_state(
+                ScheduleRunningStateEnum.IDLE, reason="no_animal_selected"
+            )
             return
 
         self._state.current_task = self._create_task(animal_state)
@@ -288,17 +311,23 @@ class Scheduler:
 
     def _on_animal_entered(self, animal_name: str) -> None:
         self._state.animal_state = self._get_animal_state(animal_name)
-        self._state.state = ScheduleRunningStateEnum.SCHEDULE
+        self._transition_to_state(
+            ScheduleRunningStateEnum.SCHEDULE, reason="animal_entered"
+        )
         if self._state.current_task is not None:
             self._state.current_task.quit()
 
     def _on_animal_returned(self, _: str) -> None:
-        self._state.state = ScheduleRunningStateEnum.SCHEDULE
+        self._transition_to_state(
+            ScheduleRunningStateEnum.SCHEDULE, reason="animal_returned"
+        )
         if self._state.current_task is not None:
             self._state.current_task.on_return()
 
     def _on_animal_left(self, _: str) -> None:
-        self._state.state = ScheduleRunningStateEnum.IDLE
+        self._transition_to_state(
+            ScheduleRunningStateEnum.IDLE, reason="animal_left"
+        )
         if self._state.current_task is None:
             return
 
@@ -310,12 +339,16 @@ class Scheduler:
 
     def _on_animal_changed(self, animal_name: str) -> None:
         self._state.animal_state = self._get_animal_state(animal_name)
-        self._state.state = ScheduleRunningStateEnum.SCHEDULE
+        self._transition_to_state(
+            ScheduleRunningStateEnum.SCHEDULE, reason="animal_changed"
+        )
         if self._state.current_task is not None:
             self._state.current_task.quit()
 
     def _on_detect_error(self, _: str) -> None:
-        self._state.state = ScheduleRunningStateEnum.ERROR
+        self._transition_to_state(
+            ScheduleRunningStateEnum.ERROR, reason="error_detected"
+        )
         if self._state.current_task is not None:
             self._state.current_task.quit()
 
@@ -324,7 +357,7 @@ class Scheduler:
             return
 
         record = self._build_history_record(SchedulerEvent.TASK_SWITCH, animal_state)
-        record["previous_task"] = previous_task.name
+        record.previous_task = previous_task.name
 
         self._save_history_record(record)
 
@@ -333,29 +366,57 @@ class Scheduler:
             return
 
         record = self._build_history_record(SchedulerEvent.LEVEL_CHANGE, animal_state)
-        record["previous_level"] = previous_level
+        record.previous_level = previous_level
+
+        self._save_history_record(record)
+
+    def _transition_to_state(
+        self, new_state: ScheduleRunningStateEnum, *, reason: str | None = None
+    ) -> None:
+        previous_state = self._state.state
+        if previous_state == new_state:
+            return
+
+        self._state.state = new_state
+        self._log_state_change(previous_state, new_state, reason)
+
+    def _log_state_change(
+        self,
+        previous_state: ScheduleRunningStateEnum,
+        new_state: ScheduleRunningStateEnum,
+        reason: str | None,
+    ) -> None:
+        record = self._build_history_record(
+            SchedulerEvent.STATE_CHANGE, self._state.animal_state
+        )
+        record.previous_state = previous_state.name
+        record.new_state = new_state.name
+        if reason is not None:
+            record.reason = reason
 
         self._save_history_record(record)
 
     def _build_history_record(
-        self, event: SchedulerEvent, animal_state: AnimalState
-    ) -> dict[str, object]:
-        return {
-            "event": event.value,
-            "scheduler_state": self._state.state.name,
-            "running": self._state.running,
-            "animal_name": animal_state.name,
-            "task": animal_state.task.name,
-            "level": animal_state.level,
-            "trial_id": animal_state.trial_id,
-            "current_level_trial_id": animal_state.current_level_trial_id,
-            "correct_trial": animal_state.correct_trial,
-            "correct_rate": animal_state.correct_rate,
-        }
+        self, event: SchedulerEvent, animal_state: AnimalState | None
+    ) -> SchedulerHistoryRecord:
+        return SchedulerHistoryRecord(
+            event=event.value,
+            scheduler_state=self._state.state.name,
+            running=self._state.running,
+            animal_name=animal_state.name if animal_state else None,
+            task=animal_state.task.name if animal_state and animal_state.task else None,
+            level=animal_state.level if animal_state else None,
+            trial_id=animal_state.trial_id if animal_state else None,
+            current_level_trial_id=(
+                animal_state.current_level_trial_id if animal_state else None
+            ),
+            correct_trial=animal_state.correct_trial if animal_state else None,
+            correct_rate=animal_state.correct_rate if animal_state else None,
+        )
 
-    def _save_history_record(self, record: dict[str, object]) -> None:
+    def _save_history_record(self, record: SchedulerHistoryRecord) -> None:
         try:
-            self._scheduler_logger.save_jsonl(record)
+            self._scheduler_logger.save_jsonl(record.model_dump(mode="json"))
         except Exception:
             logger.exception("Failed to write scheduler history log")
 
