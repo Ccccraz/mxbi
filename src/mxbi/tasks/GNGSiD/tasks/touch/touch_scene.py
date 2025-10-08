@@ -14,6 +14,7 @@ from mxbi.utils.audio_control import (
     set_master_volume,
 )
 from mxbi.utils.detect_platform import Platform
+from mxbi.utils.tkinter.components.canvas_with_border import CanvasWithInnerBorder
 
 if TYPE_CHECKING:
     from concurrent.futures import Future
@@ -84,13 +85,14 @@ class GNGSiDTouchScene:
         self._create_target()
 
     def _create_background(self) -> None:
-        self._background = Canvas(
-            self._theater.root,
+        self._background = CanvasWithInnerBorder(
+            master=self._theater.root,
             bg="black",
             width=self._screen_type.width,
             height=self._screen_type.height,
-            highlightthickness=0,
+            border_width=40,
         )
+
         self._background.place(relx=0.5, rely=0.5, anchor="center")
 
     def _create_target(self) -> None:

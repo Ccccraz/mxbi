@@ -1,5 +1,6 @@
 from tkinter import Canvas
 
+
 class BaseViews:
     def _create_background(self, master, width, height) -> None:
         self._backgroud = Canvas(

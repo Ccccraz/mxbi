@@ -110,10 +110,14 @@ class LaunchPanel:
         frame_animals_buttons.pack(fill="x")
         frame_animals_buttons.columnconfigure(0, weight=1)
 
-        button_add_animal = Button(frame_animals_buttons, text="Add animal", command=self._add_animal)
+        button_add_animal = Button(
+            frame_animals_buttons, text="Add animal", command=self._add_animal
+        )
         button_add_animal.grid(row=0, column=0, padx=2, pady=2, sticky="w")
 
-        button_remove_animal = Button(frame_animals_buttons, text="Remove animal", command=self._remove_animal)
+        button_remove_animal = Button(
+            frame_animals_buttons, text="Remove animal", command=self._remove_animal
+        )
         button_remove_animal.grid(row=0, column=1, padx=2, pady=2, sticky="e")
 
     def _init_buttons_ui(self) -> None:

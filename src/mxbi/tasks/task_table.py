@@ -1,4 +1,5 @@
 from mxbi.models.task import TaskEnum
+from mxbi.tasks.default.error_task.error_scene import ErrorScene
 from mxbi.tasks.default.idle_task.idle_scene import IDLEScene
 from mxbi.tasks.default.initial_habituation_training.initial_habituation_training import (
     InitialHabituationTraining,
@@ -11,7 +12,6 @@ from mxbi.tasks.GNGSiD.stages.size_reduction_stage.size_reduction_stage import (
     SizeReductionStage,
 )
 from mxbi.tasks.task_protocol import Task
-from mxbi.tasks.default.error_task.error_scene import ErrorScene
 
 task_table: dict[TaskEnum, type[Task]] = {
     TaskEnum.IDEL: IDLEScene,

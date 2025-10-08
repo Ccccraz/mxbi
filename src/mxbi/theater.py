@@ -6,9 +6,9 @@ from mxbi.config import session_config
 from mxbi.data_logger import DataLogger
 from mxbi.models.session import SessionConfig, SessionState
 from mxbi.scheduler import Scheduler
+from mxbi.utils.aplayer import APlayer
 from mxbi.utils.detect_platform import Platform
 from mxbi.utils.rewarder.rewarder import PumpTable, Rewarder
-from mxbi.utils.aplayer import APlayer
 
 
 class Theater:

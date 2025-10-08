@@ -1,12 +1,14 @@
+from concurrent.futures import Future, ThreadPoolExecutor
+from dataclasses import dataclass
+from functools import lru_cache
+from threading import Event
+
 import numpy as np
 import pyaudio
 from numpy.typing import NDArray
 from pydantic import BaseModel
-from concurrent.futures import Future, ThreadPoolExecutor
-from mxbi.utils.audio_control import set_master_volume, set_digital_volume
-from dataclasses import dataclass
-from functools import lru_cache
-from threading import Event
+
+from mxbi.utils.audio_control import set_digital_volume, set_master_volume
 
 
 @dataclass
@@ -79,7 +81,9 @@ class APlayer:
             )
 
         if unit.frequency is None or unit.duration is None:
-            raise ValueError("StimulusSequenceUnit requires frequency and duration when stimulus is not provided")
+            raise ValueError(
+                "StimulusSequenceUnit requires frequency and duration when stimulus is not provided"
+            )
 
         stimulus = self.generate_stimulus(
             [
@@ -220,9 +224,7 @@ if __name__ == "__main__":
     normalized_tone = tone_s / np.iinfo(np.int16).max
     time_axis = np.linspace(0, len(tone_s) / SAMPLE_RATE * 1000, len(tone_s))
     axes[0].plot(time_axis, normalized_tone)
-    axes[0].set_title(
-        f"Single Stimulus - {freq_1.frequency}Hz, {freq_1.duration}ms"
-    )
+    axes[0].set_title(f"Single Stimulus - {freq_1.frequency}Hz, {freq_1.duration}ms")
     axes[0].set_xlim(0, freq_1.duration)
     axes[0].set_ylabel("Amplitude")
     axes[0].grid(True)

@@ -15,5 +15,5 @@ logger.add(
     compression="zip",
     encoding="utf-8",
     level="DEBUG",
-    serialize=True
+    serialize=True,
 )

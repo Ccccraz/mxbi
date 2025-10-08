@@ -1,5 +1,5 @@
+from random import choice, choices, randint
 from typing import TYPE_CHECKING, Final
-from random import choices, choice, randint
 
 from mxbi.data_logger import DataLogger
 from mxbi.models.animal import ScheduleCondition
@@ -12,8 +12,8 @@ from mxbi.tasks.GNGSiD.tasks.discriminate.discriminate_models import TrialConfig
 from mxbi.tasks.GNGSiD.tasks.discriminate.discriminate_scene import (
     GNGSiDDiscriminateScene,
 )
-from mxbi.utils.logger import logger
 from mxbi.utils.audio_control import get_amp_value
+from mxbi.utils.logger import logger
 
 if TYPE_CHECKING:
     from mxbi.models.animal import AnimalState
