@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from mxbi.models.animal import AnimalConfig, AnimalOptions
 from mxbi.models.reward import RewardEnum
+from mxbi.peripheral.pumps.pump_factory import DEFAULT_PUMP, PumpEnum
 from mxbi.utils.detect_platform import Platform
 
 
@@ -26,6 +27,7 @@ class SessionConfig(BaseModel):
     xbi_id: str = ""
     comments: str = ""
     reward_type: RewardEnum = RewardEnum.AGUM_ONE_FIFTH
+    pump_type: PumpEnum = DEFAULT_PUMP
     platform: Platform = Platform.RASPBERRY
     RFID: bool = True
     screen_type: ScreenConfig = Field(default_factory=ScreenConfig)
@@ -46,6 +48,7 @@ class SessionOptions(BaseModel):
     experimenter: list[str]
     xbi_id: list[str]
     reward_type: list[RewardEnum] = Field(default_factory=lambda: list(RewardEnum))
+    pump_type: list[PumpEnum] = Field(default_factory=lambda: list(PumpEnum))
     platform: list[Platform] = Field(default_factory=lambda: list(Platform))
     RFID: list[bool] = Field(default_factory=lambda: [False, True])
     screen_type: dict[ScreenTypeEnum, ScreenConfig] = Field(
