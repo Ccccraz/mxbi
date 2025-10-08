@@ -1,14 +1,17 @@
-from typing import TYPE_CHECKING, Final
 from random import choice
+from typing import TYPE_CHECKING, Final
 
 from mxbi.data_logger import DataLogger
 from mxbi.models.animal import ScheduleCondition
 from mxbi.tasks.GNGSiD.models import Result
-from mxbi.tasks.GNGSiD.stages.size_reduction_stage.size_reduction_models import SizeReductionStageConfig, config
+from mxbi.tasks.GNGSiD.stages.size_reduction_stage.size_reduction_models import (
+    SizeReductionStageConfig,
+    config,
+)
 from mxbi.tasks.GNGSiD.tasks.touch.touch_models import TrialConfig
 from mxbi.tasks.GNGSiD.tasks.touch.touch_scene import GNGSiDTouchScene
-from mxbi.utils.logger import logger
 from mxbi.utils.audio_control import get_amp_value
+from mxbi.utils.logger import logger
 
 if TYPE_CHECKING:
     from mxbi.models.animal import AnimalState

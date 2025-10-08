@@ -3,10 +3,10 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
 
-from mxbi.data_logger import DataLogger
 from mxbi.animal_detector.animal_detector import AnimalDetector, DetectorEvent
 from mxbi.animal_detector.debug_detector import DebugDetector
 from mxbi.config import session_config
+from mxbi.data_logger import DataLogger
 from mxbi.models.animal import AnimalState
 from mxbi.models.scheduler import SchedulerState, ScheduleRunningStateEnum
 from mxbi.models.task import TaskEnum
@@ -325,9 +325,7 @@ class Scheduler:
             self._state.current_task.on_return()
 
     def _on_animal_left(self, _: str) -> None:
-        self._transition_to_state(
-            ScheduleRunningStateEnum.IDLE, reason="animal_left"
-        )
+        self._transition_to_state(ScheduleRunningStateEnum.IDLE, reason="animal_left")
         if self._state.current_task is None:
             return
 
@@ -352,7 +350,9 @@ class Scheduler:
         if self._state.current_task is not None:
             self._state.current_task.quit()
 
-    def _log_task_switch(self, animal_state: AnimalState, previous_task: TaskEnum) -> None:
+    def _log_task_switch(
+        self, animal_state: AnimalState, previous_task: TaskEnum
+    ) -> None:
         if animal_state.task == previous_task:
             return
 

@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict, RootModel
 
 from mxbi.config import Configure
 from mxbi.models.animal import ScheduleCondition
-from mxbi.tasks.GNGSiD.models import MonkeyName, LevelID
+from mxbi.tasks.GNGSiD.models import LevelID, MonkeyName
 
 CONFIG_PATH: Path = Path(__file__).parent / "config.json"
 

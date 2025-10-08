@@ -1,7 +1,8 @@
+from typing import TYPE_CHECKING
+
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from mxbi.models.task import TaskEnum
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from mxbi.models.task import Feedback
