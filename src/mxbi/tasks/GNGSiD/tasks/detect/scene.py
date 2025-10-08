@@ -7,8 +7,9 @@ from mxbi.tasks.GNGSiD.models import Result, TouchEvent
 from mxbi.tasks.GNGSiD.tasks.detect.models import TrialConfig, TrialData
 from mxbi.tasks.GNGSiD.tasks.utils.targets import DetectTarget
 from mxbi.utils.aplayer import ToneConfig
+from mxbi.utils.audio_control import set_digital_volume, set_master_volume
 from mxbi.utils.detect_platform import Platform
-from mxbi.utils.audio_control import set_master_volume, set_digital_volume
+from mxbi.utils.tkinter.components.canvas_with_border import CanvasWithInnerBorder
 
 if TYPE_CHECKING:
     from concurrent.futures import Future
@@ -62,12 +63,12 @@ class GNGSiDDetectScene:
         self._bind_first_stage()
 
     def _on_inter_trial(self) -> None:
-        self._backgroud.after(
+        self._background.after(
             self._trial_config.inter_trial_interval, self._on_trial_end
         )
 
     def _on_trial_end(self) -> None:
-        self._backgroud.destroy()
+        self._background.destroy()
         self._theater.root.quit()
 
     # endregion
@@ -78,14 +79,14 @@ class GNGSiDDetectScene:
         self._create_target()
 
     def _create_background(self) -> None:
-        self._backgroud = Canvas(
-            self._theater.root,
+        self._background = CanvasWithInnerBorder(
+            master=self._theater.root,
             bg="black",
             width=self._screen_type.width,
             height=self._screen_type.height,
-            highlightthickness=0,
+            border_width=40,
         )
-        self._backgroud.place(relx=0.5, rely=0.5, anchor="center")
+        self._background.place(relx=0.5, rely=0.5, anchor="center")
 
     def _create_target(self):
         xshift = 240
@@ -93,13 +94,13 @@ class GNGSiDDetectScene:
         ycenter = self._screen_type.height * 0.5
 
         self._trigger_canvas = DetectTarget(
-            self._backgroud, self._trial_config.stimulation_size
+            self._background, self._trial_config.stimulation_size
         )
         self._trigger_canvas.place(x=xcenter, y=ycenter, anchor="center")
 
     def _create_wrong_view(self) -> None:
         self._trigger_canvas = Canvas(
-            self._backgroud,
+            self._background,
             bg="grey",
             width=self._screen_type.width,
             height=self._screen_type.height,
@@ -110,8 +111,8 @@ class GNGSiDDetectScene:
 
     # region event binding
     def _bind_first_stage(self) -> None:
-        self._backgroud.focus_set()
-        self._backgroud.bind("<r>", self._give_reward)
+        self._background.focus_set()
+        self._background.bind("<r>", self._give_reward)
         self._trigger_canvas.bind("<ButtonPress>", self._on_first_touched)
         self._trigger_canvas.after(self._trial_config.time_out, self._on_timeout)
 
@@ -135,7 +136,7 @@ class GNGSiDDetectScene:
             future = self._give_stimulus(self._tone)
             future.add_done_callback(self._on_stimulus_complete)
 
-        self._backgroud.after(
+        self._background.after(
             self._trial_config.visual_stimulus_delay,
             lambda: (self._create_target(), self._bind_second_stage()),
         )
@@ -150,7 +151,7 @@ class GNGSiDDetectScene:
             future = self._give_stimulus(self._tone)
             future.add_done_callback(self._on_stimulus_complete)
 
-        self._backgroud.after(2000, self._create_target)
+        self._background.after(2000, self._create_target)
 
     def _record_touch(self, event: Event) -> None:
         self._data.touch_events.append(
@@ -215,7 +216,7 @@ class GNGSiDDetectScene:
 
     def _on_stimulus_complete(self, future: "Future[bool]") -> None:
         if future.result():
-            self._backgroud.after(self._trial_config.reward_delay, self._on_correct)
+            self._background.after(self._trial_config.reward_delay, self._on_correct)
 
     def _give_reward(self, _=None) -> None:
         self._theater.reward.give_reward(self._trial_config.reward_duration)

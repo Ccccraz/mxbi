@@ -1,5 +1,4 @@
 from datetime import datetime
-from tkinter import Canvas
 from typing import TYPE_CHECKING, Final
 
 from mxbi.data_logger import DataLogger
@@ -10,6 +9,7 @@ from mxbi.tasks.default.initial_habituation_training.models import (
     config,
 )
 from mxbi.utils.logger import logger
+from mxbi.utils.tkinter.components.canvas_with_border import CanvasWithInnerBorder
 
 if TYPE_CHECKING:
     from mxbi.models.animal import AnimalState
@@ -60,13 +60,14 @@ class InitialHabituationTraining:
         self._start_reward_loop()
 
     def _create_view(self) -> None:
-        self._background = Canvas(
+        self._background = CanvasWithInnerBorder(
             self._theater.root,
-            bg="black",
             width=self._session_state.session_config.screen_type.width,
             height=self._session_state.session_config.screen_type.height,
-            highlightthickness=0,
+            bg="black",
+            border_width=40,
         )
+
         self._background.place(relx=0.5, rely=0.5, anchor="center")
 
     def _bind_events(self) -> None:
@@ -118,5 +119,5 @@ class InitialHabituationTraining:
             trial_start_time=datetime.now().timestamp(),
             trial_end_time=0,
             stay_duration=0,
-            rewards={}
+            rewards={},
         )

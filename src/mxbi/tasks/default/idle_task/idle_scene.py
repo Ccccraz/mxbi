@@ -1,15 +1,15 @@
-from tkinter import Canvas
 from tkinter.ttk import Label
 from typing import TYPE_CHECKING
 
 from PIL import Image, ImageTk
 
+from mxbi.utils.tkinter.components.canvas_with_border import CanvasWithInnerBorder
+
 if TYPE_CHECKING:
-    from mxbi.models.animal import AnimalState
+    from mxbi.models.animal import AnimalState, ScheduleCondition
     from mxbi.models.session import SessionState
-    from mxbi.theater import Theater
-    from mxbi.models.animal import ScheduleCondition
     from mxbi.models.task import Feedback
+    from mxbi.theater import Theater
 
 
 class IDLEScene:
@@ -39,12 +39,12 @@ class IDLEScene:
         self._theater.root.quit()
 
     def _create_view(self) -> None:
-        self._background = Canvas(
-            self._theater.root,
+        self._background = CanvasWithInnerBorder(
+            master=self._theater.root,
             bg="black",
             width=self._screen_type.width,
             height=self._screen_type.height,
-            highlightthickness=0,
+            border_width=40,
         )
         self._background.place(relx=0.5, rely=0.5, anchor="center")
 
