@@ -5,10 +5,10 @@ from typing import Callable
 from mxbi.config import session_config
 from mxbi.data_logger import DataLogger
 from mxbi.models.session import SessionConfig, SessionState
+from mxbi.peripheral.pumps.pump_factory import PumpFactory
+from mxbi.peripheral.pumps.rewarder import Rewarder
 from mxbi.scheduler import Scheduler
 from mxbi.utils.aplayer import APlayer
-from mxbi.utils.detect_platform import Platform
-from mxbi.utils.rewarder.rewarder import PumpTable, Rewarder
 
 
 class Theater:
@@ -36,19 +36,7 @@ class Theater:
         self._scheduler.start()
 
     def _init_rewarder(self) -> Rewarder:
-        platform = self._config.platform
-
-        pump_type: PumpTable = PumpTable.MOCK
-        if (
-            platform == Platform.WINDOWS
-            or platform == Platform.LINUX
-            or platform == Platform.MACOS
-        ):
-            pump_type = PumpTable.MOCK
-        else:
-            pump_type = PumpTable.RASBERRY
-
-        return Rewarder(pump_type)
+        return PumpFactory.create(self._config.pump_type)
 
     def _init_tk(self) -> None:
         screen_type = session_config.value.screen_type

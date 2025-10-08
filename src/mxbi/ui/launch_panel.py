@@ -6,6 +6,7 @@ from mxbi.config import session_config, session_options
 from mxbi.models.animal import AnimalConfig
 from mxbi.models.reward import RewardEnum
 from mxbi.models.session import ScreenTypeEnum, SessionConfig
+from mxbi.peripheral.pumps.pump_factory import PumpEnum
 from mxbi.ui.components.animal_card import AnimalCard
 from mxbi.ui.components.fileds.labeled_checkbox import create_checkbox
 from mxbi.ui.components.fileds.labeled_combobox import create_cobmbo
@@ -64,6 +65,14 @@ class LaunchPanel:
             session_config.value.reward_type,
         )
         self.combo_reward.pack(fill="x", expand=True)
+
+        self.combo_pump = create_cobmbo(
+            frame_general,
+            "Pump: ",
+            [i for i in session_options.value.pump_type],
+            session_config.value.pump_type,
+        )
+        self.combo_pump.pack(fill="x", expand=True)
 
         self.combo_platform = create_cobmbo(
             frame_general,
@@ -162,6 +171,7 @@ class LaunchPanel:
             experimenter=self.combo_experimenter.get(),
             xbi_id=self.combo_xbi.get(),
             reward_type=RewardEnum(self.combo_reward.get()),
+            pump_type=PumpEnum(self.combo_pump.get()),
             platform=Platform(self.combo_platform.get()),
             RFID=self.checkbox_rfid.get(),
             screen_type=session_options.value.screen_type[
