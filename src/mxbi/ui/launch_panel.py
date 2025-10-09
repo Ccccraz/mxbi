@@ -11,7 +11,7 @@ from mxbi.ui.components.animal_card import AnimalCard
 from mxbi.ui.components.fileds.labeled_checkbox import create_checkbox
 from mxbi.ui.components.fileds.labeled_combobox import create_cobmbo
 from mxbi.ui.components.fileds.labeled_textbox import create_textbox
-from mxbi.utils.detect_platform import Platform
+from mxbi.utils.detect_platform import PlatformEnum
 
 
 class LaunchPanel:
@@ -172,7 +172,7 @@ class LaunchPanel:
             xbi_id=self.combo_xbi.get(),
             reward_type=RewardEnum(self.combo_reward.get()),
             pump_type=PumpEnum(self.combo_pump.get()),
-            platform=Platform(self.combo_platform.get()),
+            platform=PlatformEnum(self.combo_platform.get()),
             RFID=self.checkbox_rfid.get(),
             screen_type=session_options.value.screen_type[
                 ScreenTypeEnum(self.combo_screen.get())

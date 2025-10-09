@@ -7,8 +7,10 @@ import numpy as np
 import pyaudio
 from numpy.typing import NDArray
 from pydantic import BaseModel
+from typing import TYPE_CHECKING
 
-from mxbi.utils.audio_control import set_digital_volume, set_master_volume
+if TYPE_CHECKING:
+    from mxbi.theater import Theater
 
 
 @dataclass
@@ -50,7 +52,8 @@ def _cached_wave_unit(frequency: int, duration: int) -> NDArray[np.int16]:
 
 
 class APlayer:
-    def __init__(self):
+    def __init__(self, theater: "Theater") -> None:
+        self._theater = theater
         self._executor = ThreadPoolExecutor(1)
         self._player = pyaudio.PyAudio()
         self._stop_event = Event()
@@ -160,8 +163,8 @@ class APlayer:
         """Internal helper that applies volume overrides before each stimulus unit."""
         for tone in tones:
             if tone.master_volume is not None and tone.digital_volume is not None:
-                set_master_volume(tone.master_volume)
-                set_digital_volume(tone.digital_volume)
+                self._theater.acontroller.set_master_volume(tone.master_volume)
+                self._theater.acontroller.set_digital_volume(tone.digital_volume)
 
             if tone.stimulus is None:
                 continue
@@ -201,7 +204,9 @@ class APlayer:
 
 
 if __name__ == "__main__":
-    player = APlayer()
+    theater = Theater()
+
+    player = APlayer(theater)
 
     freq_1 = ToneConfig(frequency=1000, duration=100)
     count = 1

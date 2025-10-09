@@ -5,24 +5,24 @@ from enum import StrEnum, auto
 from mxbi.utils.logger import logger
 
 
-class Platform(StrEnum):
+class PlatformEnum(StrEnum):
     WINDOWS = auto()
     LINUX = auto()
     MACOS = auto()
     RASPBERRY = auto()
 
 
-def detect_current_platform() -> Platform:
+def detect_current_platform() -> PlatformEnum:
     if platform.system() == "Windows":
-        return Platform.WINDOWS
+        return PlatformEnum.WINDOWS
     elif platform.system() == "Linux":
         if is_raspberry_pi():
-            return Platform.RASPBERRY
+            return PlatformEnum.RASPBERRY
         else:
-            return Platform.LINUX
+            return PlatformEnum.LINUX
 
     elif platform.system() == "Darwin":
-        return Platform.MACOS
+        return PlatformEnum.MACOS
 
     else:
         raise NotImplementedError("Platform not supported")

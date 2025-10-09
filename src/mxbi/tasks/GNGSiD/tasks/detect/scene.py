@@ -7,8 +7,6 @@ from mxbi.tasks.GNGSiD.models import Result, TouchEvent
 from mxbi.tasks.GNGSiD.tasks.detect.models import TrialConfig, TrialData
 from mxbi.tasks.GNGSiD.tasks.utils.targets import DetectTarget
 from mxbi.utils.aplayer import ToneConfig
-from mxbi.utils.audio_control import set_digital_volume, set_master_volume
-from mxbi.utils.detect_platform import Platform
 from mxbi.utils.tkinter.components.canvas_with_border import CanvasWithInnerBorder
 
 if TYPE_CHECKING:
@@ -39,8 +37,7 @@ class GNGSiDDetectScene:
 
         self._tone: Final[NDArray[int16]] = self._prepare_stimulus()
 
-        if session_config.platform == Platform.RASPBERRY:
-            self._set_stimulus_intensity()
+        self._set_stimulus_intensity()
 
         self._on_trial_start()
 
@@ -222,8 +219,12 @@ class GNGSiDDetectScene:
         self._theater.reward.give_reward(self._trial_config.reward_duration)
 
     def _set_stimulus_intensity(self) -> None:
-        set_master_volume(self._trial_config.stimulus_freq_master_amp)
-        set_digital_volume(self._trial_config.stimulus_freq_digital_amp)
+        self._theater.acontroller.set_master_volume(
+            self._trial_config.stimulus_freq_master_amp
+        )
+        self._theater.acontroller.set_digital_volume(
+            self._trial_config.stimulus_freq_digital_amp
+        )
 
     # endregion
 

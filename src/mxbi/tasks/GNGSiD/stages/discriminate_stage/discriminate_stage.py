@@ -12,7 +12,6 @@ from mxbi.tasks.GNGSiD.tasks.discriminate.discriminate_models import TrialConfig
 from mxbi.tasks.GNGSiD.tasks.discriminate.discriminate_scene import (
     GNGSiDDiscriminateScene,
 )
-from mxbi.utils.audio_control import get_amp_value
 from mxbi.utils.logger import logger
 
 if TYPE_CHECKING:
@@ -31,6 +30,7 @@ class GNGSiDDiscriminateStage:
         session_state: "SessionState",
         animal_state: "AnimalState",
     ) -> None:
+        self._theater = theater
         self._session_state = session_state
         self._animal_state = animal_state
 
@@ -150,4 +150,4 @@ class GNGSiDDiscriminateStage:
     def _prepare_stimulus_intensity(self, monkey: str, frequency: int):
         stimulus_intensity = choice([55, 60, 65, 70, 75])
 
-        return get_amp_value(frequency, stimulus_intensity)
+        return self._theater.acontroller.get_amp_value(frequency, stimulus_intensity)
