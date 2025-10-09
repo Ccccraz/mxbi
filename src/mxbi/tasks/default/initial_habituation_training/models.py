@@ -39,4 +39,11 @@ class TrialData(BaseModel):
     rewards: dict[float, int]
 
 
+class DataToShow(BaseModel):
+    name: str
+    id: int
+    dur: str
+    rewards: int
+
+
 config = Configure(CONFIG_PATH, DetectStageConfigs).value

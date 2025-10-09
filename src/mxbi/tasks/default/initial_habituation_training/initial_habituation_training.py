@@ -4,12 +4,14 @@ from typing import TYPE_CHECKING, Final
 from mxbi.data_logger import DataLogger
 from mxbi.models.animal import ScheduleCondition
 from mxbi.tasks.default.initial_habituation_training.models import (
+    DataToShow,
     DetectStageConfig,
     TrialData,
     config,
 )
 from mxbi.utils.logger import logger
 from mxbi.utils.tkinter.components.canvas_with_border import CanvasWithInnerBorder
+from mxbi.utils.tkinter.components.showdata_widget import ShowDataWidget
 
 if TYPE_CHECKING:
     from mxbi.models.animal import AnimalState
@@ -58,8 +60,13 @@ class InitialHabituationTraining:
         self._init_data()
         self._bind_events()
         self._start_reward_loop()
+        self._start_tracking_data()
 
     def _create_view(self) -> None:
+        self._create_background()
+        self._create_show_data_widget()
+
+    def _create_background(self) -> None:
         self._background = CanvasWithInnerBorder(
             self._theater.root,
             width=self._session_state.session_config.screen_type.width,
@@ -69,6 +76,17 @@ class InitialHabituationTraining:
         )
 
         self._background.place(relx=0.5, rely=0.5, anchor="center")
+
+    def _create_show_data_widget(self) -> None:
+        self._show_data_widget = ShowDataWidget(self._background)
+        self._show_data_widget.place(relx=0, rely=1, anchor="sw")
+        _data = DataToShow(
+            name=self._animal_state.name,
+            id=self._animal_state.trial_id,
+            dur="0 s",
+            rewards=0,
+        )
+        self._show_data_widget.show_data(_data.model_dump())
 
     def _bind_events(self) -> None:
         # Manual reward
@@ -82,6 +100,19 @@ class InitialHabituationTraining:
         self._background.after(
             self._stage_config.params.stay_duration, self._start_reward_loop
         )
+
+    def _start_tracking_data(self) -> None:
+        self._data.stay_duration = (
+            datetime.now().timestamp() - self._data.trial_start_time
+        )
+        data = DataToShow(
+            name=self._animal_state.name,
+            id=self._animal_state.trial_id,
+            dur=f"{int(self._data.stay_duration)} s",
+            rewards=len(self._data.rewards),
+        )
+        self._show_data_widget.update_data(data.model_dump())
+        self._background.after(1000, self._start_tracking_data)
 
     def _give_reward(self) -> None:
         self._theater.reward.give_reward(self._stage_config.params.reward_duration)

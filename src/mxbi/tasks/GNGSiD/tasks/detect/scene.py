@@ -4,10 +4,11 @@ from tkinter import CENTER, Canvas, Event
 from typing import TYPE_CHECKING, Final
 
 from mxbi.tasks.GNGSiD.models import Result, TouchEvent
-from mxbi.tasks.GNGSiD.tasks.detect.models import TrialConfig, TrialData
+from mxbi.tasks.GNGSiD.tasks.detect.models import TrialConfig, TrialData, DataToShow
 from mxbi.tasks.GNGSiD.tasks.utils.targets import DetectTarget
 from mxbi.utils.aplayer import ToneConfig
 from mxbi.utils.tkinter.components.canvas_with_border import CanvasWithInnerBorder
+from mxbi.utils.tkinter.components.showdata_widget import ShowDataWidget
 
 if TYPE_CHECKING:
     from concurrent.futures import Future
@@ -18,6 +19,7 @@ if TYPE_CHECKING:
     from mxbi.models.animal import AnimalState
     from mxbi.models.session import ScreenConfig, SessionConfig
     from mxbi.theater import Theater
+    from mxbi.tasks.GNGSiD.models import PersistentData
 
 
 class GNGSiDDetectScene:
@@ -28,12 +30,13 @@ class GNGSiDDetectScene:
         animal_state: "AnimalState",
         screen_type: "ScreenConfig",
         trial_config: "TrialConfig",
+        persistent_data: "PersistentData",
     ) -> None:
         self._theater: "Final[Theater]" = theater
         self._animal_state: "Final[AnimalState]" = animal_state
         self._screen_type: "Final[ScreenConfig]" = screen_type
         self._trial_config: "Final[TrialConfig]" = trial_config
-        self._is_go_trial: bool = bool(trial_config.go)
+        self._persistent_data: Final["PersistentData"] = persistent_data
 
         self._tone: Final[NDArray[int16]] = self._prepare_stimulus()
 
@@ -73,6 +76,7 @@ class GNGSiDDetectScene:
     # region Views
     def _create_view(self) -> None:
         self._create_background()
+        self._create_show_data_view()
         self._create_target()
 
     def _create_background(self) -> None:
@@ -84,6 +88,24 @@ class GNGSiDDetectScene:
             border_width=40,
         )
         self._background.place(relx=0.5, rely=0.5, anchor="center")
+
+    def _create_show_data_view(self) -> None:
+        self._show_data_widget = ShowDataWidget(self._background)
+        self._show_data_widget.place(relx=0, rely=1, anchor="sw")
+        data = DataToShow(
+            name=self._animal_state.name,
+            id=self._animal_state.trial_id,
+            level_id=self._animal_state.current_level_trial_id,
+            level=self._trial_config.level,
+            rewards=self._persistent_data.rewards,
+            correct=self._animal_state.correct_trial,
+            incorrect=self._persistent_data.incorrect,
+            timeout=self._persistent_data.timeout,
+            stimulus=self._trial_config.go,
+        )
+        self._show_data_widget.show_data(data.model_dump())
+        
+
 
     def _create_target(self):
         xshift = 240
@@ -117,7 +139,7 @@ class GNGSiDDetectScene:
         self._trigger_canvas.bind("<ButtonPress>", self._on_second_touched)
 
         # TODO: Confirm the waiting time
-        if not self._is_go_trial:
+        if not self._trial_config.go:
             self._trigger_canvas.after(
                 self._trial_config.stimulus_duration, self._on_incorrect
             )
@@ -129,7 +151,7 @@ class GNGSiDDetectScene:
         self._trigger_canvas.destroy()
         self._record_touch(event)
 
-        if self._is_go_trial:
+        if self._trial_config.go:
             future = self._give_stimulus(self._tone)
             future.add_done_callback(self._on_stimulus_complete)
 
@@ -142,7 +164,7 @@ class GNGSiDDetectScene:
         self._trigger_canvas.destroy()
         self._record_touch(event)
 
-        if self._is_go_trial:
+        if self._trial_config.go:
             self._on_incorrect()
         else:
             future = self._give_stimulus(self._tone)
@@ -216,6 +238,7 @@ class GNGSiDDetectScene:
             self._background.after(self._trial_config.reward_delay, self._on_correct)
 
     def _give_reward(self, _=None) -> None:
+        self._persistent_data.rewards += 1
         self._theater.reward.give_reward(self._trial_config.reward_duration)
 
     def _set_stimulus_intensity(self) -> None:
