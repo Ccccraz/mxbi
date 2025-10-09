@@ -50,3 +50,21 @@ class BaseTrialData(BaseModel):
     result: Result
     correct_rate: float
     touch_events: list[TouchEvent]
+
+
+class BaseDataToShow(BaseModel):
+    name: str
+    id: int
+    level_id: int
+    level: int
+    rewards: int
+    correct: int
+    incorrect: int
+    timeout: int
+
+class PersistentData(BaseModel):
+    rewards: int
+    correct: int
+    incorrect: int
+    timeout: int
+

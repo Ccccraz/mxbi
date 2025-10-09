@@ -11,12 +11,16 @@ from mxbi.tasks.GNGSiD.stages.size_reduction_stage.size_reduction_models import 
 from mxbi.tasks.GNGSiD.tasks.touch.touch_models import TrialConfig
 from mxbi.tasks.GNGSiD.tasks.touch.touch_scene import GNGSiDTouchScene
 from mxbi.utils.logger import logger
+from mxbi.tasks.GNGSiD.models import PersistentData
 
 if TYPE_CHECKING:
     from mxbi.models.animal import AnimalState
     from mxbi.models.session import SessionState
     from mxbi.models.task import Feedback
     from mxbi.theater import Theater
+
+
+_presistent_data: dict[str, PersistentData] = {}
 
 
 class SizeReductionStage:
@@ -60,12 +64,24 @@ class SizeReductionStage:
             self._session_state, self._animal_state.name, self.STAGE_NAME
         )
 
+        self._presistent_data = _presistent_data.get(self._animal_state.name)
+
+        if self._presistent_data is None:
+            self._presistent_data = PersistentData(
+                rewards=0,
+                correct=0,
+                incorrect=0,
+                timeout=0,
+            )
+            _presistent_data[self._animal_state.name] = self._presistent_data
+
         self._task = GNGSiDTouchScene(
             theater,
             session_state.session_config,
             animal_state,
             session_state.session_config.screen_type,
             _config,
+            self._presistent_data,
         )
 
     def start(self) -> "Feedback":
@@ -95,10 +111,13 @@ class SizeReductionStage:
         feedback = False
         match result:
             case Result.CORRECT:
+                _presistent_data[self._animal_state.name].correct += 1
                 feedback = True
             case Result.INCORRECT:
+                _presistent_data[self._animal_state.name].incorrect += 1
                 feedback = False
             case Result.TIMEOUT:
+                _presistent_data[self._animal_state.name].timeout += 1
                 feedback = False
             case Result.CANCEL:
                 feedback = False

@@ -7,15 +7,18 @@ from mxbi.tasks.GNGSiD.models import Result, TouchEvent
 from mxbi.tasks.GNGSiD.tasks.discriminate.discriminate_models import (
     TrialConfig,
     TrialData,
+    DataToShow
 )
 from mxbi.tasks.GNGSiD.tasks.utils.targets import DiscriminateTarget
 from mxbi.utils.aplayer import StimulusSequenceUnit
 from mxbi.utils.tkinter.components.canvas_with_border import CanvasWithInnerBorder
+from mxbi.utils.tkinter.components.showdata_widget import ShowDataWidget
 
 if TYPE_CHECKING:
     from mxbi.models.animal import AnimalState
     from mxbi.models.session import ScreenConfig, SessionConfig
     from mxbi.theater import Theater
+    from mxbi.tasks.GNGSiD.models import PersistentData
 
 
 class GNGSiDDiscriminateScene:
@@ -26,6 +29,7 @@ class GNGSiDDiscriminateScene:
         animal_state: "AnimalState",
         screen_type: "ScreenConfig",
         trial_config: "TrialConfig",
+        persistent_data: "PersistentData",
     ) -> None:
         # Track shared dependencies and trial configuration
         self._theater: Final[Theater] = theater
@@ -33,6 +37,7 @@ class GNGSiDDiscriminateScene:
         self._animal_state: Final[AnimalState] = animal_state
         self._screen_type: Final[ScreenConfig] = screen_type
         self._trial_config: Final[TrialConfig] = trial_config
+        self._persistent_data: Final["PersistentData"] = persistent_data
 
         # Build stimulus units for attention, high, and low tones
         attention_unit = self._build_stimulus_unit(
@@ -109,6 +114,7 @@ class GNGSiDDiscriminateScene:
     # region views
     def _create_view(self) -> None:
         self._create_background()
+        self._create_show_data_view()
         self._create_target()
 
     def _create_background(self) -> None:
@@ -121,6 +127,23 @@ class GNGSiDDiscriminateScene:
         )
 
         self._background.place(relx=0.5, rely=0.5, anchor="center")
+
+    def _create_show_data_view(self) -> None:
+        self._show_data_widget = ShowDataWidget(self._background)
+        self._show_data_widget.place(relx=0, rely=1, anchor="sw")
+        data = DataToShow(
+            name=self._animal_state.name,
+            id=self._animal_state.trial_id,
+            level_id=self._animal_state.current_level_trial_id,
+            level=self._trial_config.level,
+            rewards=self._persistent_data.rewards,
+            correct=self._animal_state.correct_trial,
+            incorrect=self._persistent_data.incorrect,
+            timeout=self._persistent_data.timeout,
+            stimulus=self._trial_config.is_stimulus_trial,
+        )
+        self._show_data_widget.show_data(data.model_dump())
+        
 
     def _create_target(self) -> None:
         x_shift = 240
@@ -270,6 +293,7 @@ class GNGSiDDiscriminateScene:
         return self._theater.aplayer.play_stimulus_sequence(stimulus_units)
 
     def _give_reward(self) -> None:
+        self._persistent_data.rewards += 1
         self._theater.reward.give_reward(self._reward_duration)
 
     def _schedule_reward_adjustments(self) -> None:

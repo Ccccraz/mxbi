@@ -4,12 +4,11 @@ from tkinter import CENTER, Canvas, Event
 from typing import TYPE_CHECKING, Final
 
 from mxbi.tasks.GNGSiD.models import Result, TouchEvent
-from mxbi.tasks.GNGSiD.tasks.touch.touch_models import (
-    TrialData,
-)
+from mxbi.tasks.GNGSiD.tasks.touch.touch_models import DataToShow, TrialData
 from mxbi.tasks.GNGSiD.tasks.utils.targets import DetectTarget
 from mxbi.utils.aplayer import ToneConfig
 from mxbi.utils.tkinter.components.canvas_with_border import CanvasWithInnerBorder
+from mxbi.utils.tkinter.components.showdata_widget import ShowDataWidget
 
 if TYPE_CHECKING:
     from concurrent.futures import Future
@@ -21,6 +20,7 @@ if TYPE_CHECKING:
     from mxbi.models.session import ScreenConfig, SessionConfig
     from mxbi.tasks.GNGSiD.tasks.touch.touch_models import TrialConfig
     from mxbi.theater import Theater
+    from mxbi.tasks.GNGSiD.models import PersistentData
 
 
 class GNGSiDTouchScene:
@@ -31,11 +31,13 @@ class GNGSiDTouchScene:
         animal_state: "AnimalState",
         screen_type: "ScreenConfig",
         trial_config: "TrialConfig",
+        persistent_data: "PersistentData",
     ) -> None:
         self._theater: "Final[Theater]" = theater
         self._animal_state: "Final[AnimalState]" = animal_state
         self._screen_type: "Final[ScreenConfig]" = screen_type
         self._trial_config: "Final[TrialConfig]" = trial_config
+        self._persistent_data: "Final[PersistentData]" = persistent_data
 
         self._tone = self._prepare_stimulus()
 
@@ -76,6 +78,7 @@ class GNGSiDTouchScene:
     # region views
     def _create_view(self) -> None:
         self._create_background()
+        self._create_show_data_widget()
         self._create_target()
 
     def _create_background(self) -> None:
@@ -88,6 +91,21 @@ class GNGSiDTouchScene:
         )
 
         self._background.place(relx=0.5, rely=0.5, anchor="center")
+
+    def _create_show_data_widget(self) -> None:
+        self._show_data_widget = ShowDataWidget(self._background)
+        self._show_data_widget.place(relx=0, rely=1, anchor="sw")
+        data = DataToShow(
+            name=self._animal_state.name,
+            id=self._animal_state.trial_id,
+            level_id=self._animal_state.current_level_trial_id,
+            level=self._trial_config.level,
+            rewards=self._persistent_data.rewards,
+            correct=self._animal_state.correct_trial,
+            incorrect=self._persistent_data.incorrect,
+            timeout=self._persistent_data.timeout,
+        )
+        self._show_data_widget.show_data(data.model_dump())
 
     def _create_target(self) -> None:
         xshift = 240
@@ -203,6 +221,7 @@ class GNGSiDTouchScene:
             )
 
     def _give_reward(self) -> None:
+        self._persistent_data.rewards += 1
         self._theater.reward.give_reward(self._trial_config.reward_duration)
 
     def _set_stimulus_intensity(self) -> None:

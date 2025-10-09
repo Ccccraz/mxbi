@@ -11,12 +11,16 @@ from mxbi.tasks.GNGSiD.stages.detect_stage.detect_stage_models import (
 from mxbi.tasks.GNGSiD.tasks.detect.models import TrialConfig
 from mxbi.tasks.GNGSiD.tasks.detect.scene import GNGSiDDetectScene
 from mxbi.utils.logger import logger
+from mxbi.tasks.GNGSiD.models import PersistentData
 
 if TYPE_CHECKING:
     from mxbi.models.animal import AnimalState
     from mxbi.models.session import SessionState
     from mxbi.models.task import Feedback
     from mxbi.theater import Theater
+
+
+_presistent_data: dict[str, PersistentData] = {}
 
 
 class GNGSiDDetectStage:
@@ -68,12 +72,24 @@ class GNGSiDDetectStage:
             stimulus_interval=_fixed_config.stimulus_interval,
         )
 
+        self._presistent_data = _presistent_data.get(self._animal_state.name)
+
+        if self._presistent_data is None:
+            self._presistent_data = PersistentData(
+                rewards=0,
+                correct=0,
+                incorrect=0,
+                timeout=0,
+            )
+            _presistent_data[self._animal_state.name] = self._presistent_data
+
         self._task = GNGSiDDetectScene(
             theater,
             session_state.session_config,
             animal_state,
             session_state.session_config.screen_type,
             _config,
+            self._presistent_data,
         )
 
         self._data_logger = DataLogger(
@@ -107,10 +123,13 @@ class GNGSiDDetectStage:
         feedback = False
         match result:
             case Result.CORRECT:
+                _presistent_data[self._animal_state.name].correct += 1
                 feedback = True
             case Result.INCORRECT:
+                _presistent_data[self._animal_state.name].incorrect += 1
                 feedback = False
             case Result.TIMEOUT:
+                _presistent_data[self._animal_state.name].timeout += 1
                 feedback = False
             case Result.CANCEL:
                 feedback = False
