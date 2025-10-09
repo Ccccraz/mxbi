@@ -10,7 +10,6 @@ from mxbi.tasks.GNGSiD.stages.size_reduction_stage.size_reduction_models import 
 )
 from mxbi.tasks.GNGSiD.tasks.touch.touch_models import TrialConfig
 from mxbi.tasks.GNGSiD.tasks.touch.touch_scene import GNGSiDTouchScene
-from mxbi.utils.audio_control import get_amp_value
 from mxbi.utils.logger import logger
 
 if TYPE_CHECKING:
@@ -29,6 +28,7 @@ class SizeReductionStage:
         session_state: "SessionState",
         animal_state: "AnimalState",
     ) -> None:
+        self._theater = theater
         self._session_state = session_state
         self._animal_state = animal_state
 
@@ -125,4 +125,4 @@ class SizeReductionStage:
 
         stimulus_intensity = choice(intensity_options)
 
-        return get_amp_value(frequency, stimulus_intensity)
+        return self._theater.acontroller.get_amp_value(frequency, stimulus_intensity)

@@ -1,38 +1,4 @@
-import subprocess
-from random import choice
-
-
-# TODO: Determine the probability
-def set_volume(monkey: str, frequency: int) -> None:
-    db_vector = []
-    bt = choice(([[10, 30], [50, 70]])) if monkey == "wolfgang" else []
-    at = [80, 80, 80] if monkey == "wolfgang" else [80, 80, 80]
-    db_vector = at * 10 + bt
-
-    current_stimulus_intensity = choice(db_vector)
-    current_stimulus_frequency = frequency
-
-    master_amp, digital_amp = get_amp_value(
-        current_stimulus_frequency, current_stimulus_intensity
-    )
-
-    set_master_volume(master_amp)
-    set_digital_volume(digital_amp)
-
-
-def set_master_volume(volume: int) -> None:
-    subprocess.run(["amixer", "sset", "Master", f"{volume}%"])
-
-
-def set_digital_volume(volume: int) -> None:
-    subprocess.run(["amixer", "-c", "0", "sset", "Digital", f"{volume}"])
-
-
-def get_amp_value(freqency: int, amplitude: float) -> tuple[int, int]:
-    return masterVals[freqency], digitalVals[amplitude]
-
-
-masterVals: dict[int, int] = {
+master_values: dict[int, int] = {
     200: 28,
     1000: 28,
     1760: 18,
@@ -50,7 +16,7 @@ masterVals: dict[int, int] = {
     20000: 21,
 }
 
-digitalVals: dict[float, int] = {
+digital_values: dict[float, int] = {
     0: 0,
     1: 9,
     2: 19,

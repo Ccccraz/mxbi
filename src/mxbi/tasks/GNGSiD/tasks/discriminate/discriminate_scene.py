@@ -10,7 +10,6 @@ from mxbi.tasks.GNGSiD.tasks.discriminate.discriminate_models import (
 )
 from mxbi.tasks.GNGSiD.tasks.utils.targets import DiscriminateTarget
 from mxbi.utils.aplayer import StimulusSequenceUnit
-from mxbi.utils.detect_platform import Platform
 from mxbi.utils.tkinter.components.canvas_with_border import CanvasWithInnerBorder
 
 if TYPE_CHECKING:
@@ -255,8 +254,6 @@ class GNGSiDDiscriminateScene:
         master_volume: int,
         digital_volume: int,
     ) -> None:
-        if self._session_config.platform != Platform.RASPBERRY:
-            return
         unit.master_volume = master_volume
         unit.digital_volume = digital_volume
 

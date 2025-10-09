@@ -5,10 +5,16 @@ from typing import Callable
 from mxbi.config import session_config
 from mxbi.data_logger import DataLogger
 from mxbi.models.session import SessionConfig, SessionState
+from mxbi.peripheral.audio_player.controller.controller import Controller
+from mxbi.peripheral.audio_player.controller.controller_factory import (
+    AudioControllerEnum,
+    AudioControllerFactory,
+)
 from mxbi.peripheral.pumps.pump_factory import PumpFactory
 from mxbi.peripheral.pumps.rewarder import Rewarder
 from mxbi.scheduler import Scheduler
 from mxbi.utils.aplayer import APlayer
+from mxbi.utils.detect_platform import PlatformEnum
 
 
 class Theater:
@@ -26,7 +32,8 @@ class Theater:
         self._on_quit: list[Callable[[], None]] = []
 
         self._rewarder = self._init_rewarder()
-        self._aplayer = APlayer()
+        self._acontroller = self._init_audio_controller()
+        self._aplayer = APlayer(self)
 
         # init theater
         self._init_tk()
@@ -37,6 +44,13 @@ class Theater:
 
     def _init_rewarder(self) -> Rewarder:
         return PumpFactory.create(self._config.pump_type)
+
+    def _init_audio_controller(self):
+        match self._config.platform:
+            case PlatformEnum.RASPBERRY:
+                return AudioControllerFactory.create(AudioControllerEnum.AMIXER)
+            case _:
+                return AudioControllerFactory.create(AudioControllerEnum.MOCK)
 
     def _init_tk(self) -> None:
         screen_type = session_config.value.screen_type
@@ -67,6 +81,10 @@ class Theater:
     @property
     def aplayer(self) -> APlayer:
         return self._aplayer
+
+    @property
+    def acontroller(self) -> Controller:
+        return self._acontroller
 
     def mainloop(self):
         self._root.mainloop()
