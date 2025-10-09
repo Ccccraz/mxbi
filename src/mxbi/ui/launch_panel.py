@@ -1,4 +1,5 @@
 import sys
+from datetime import datetime
 from tkinter import Tk
 from tkinter.ttk import Button, Frame, Label
 
@@ -159,28 +160,52 @@ class LaunchPanel:
         animal_card.destroy()
 
     def _bind_events(self) -> None:
+        self._root.after(60000, self._auto_start)
         self._root.protocol("WM_DELETE_WINDOW", sys.exit)
 
-    def save(self) -> None:
-        animals = {
-            animal_card.data.name: animal_card.data
-            for animal_card in self._animal_cards
-        }
+    def _auto_start(self):
+        current_time = datetime.now().strftime("%Y%m%d-%H-%M-%S-%f")[:-3]
+        timezone = datetime.now().astimezone().tzinfo
 
-        config = SessionConfig(
+        config = self._build_session_config(
+            experimenter="auto",
+            comments=f"Auto task, start time: {current_time} (UTC{timezone})",
+        )
+        self._save_and_close(config)
+
+    def save(self) -> None:
+        config = self._build_session_config(
             experimenter=self.combo_experimenter.get(),
+            comments=self.entry_comments.get(),
+        )
+        self._save_and_close(config)
+
+    def _build_session_config(
+        self, *, experimenter: str, comments: str
+    ) -> SessionConfig:
+        return SessionConfig(
+            experimenter=experimenter,
             xbi_id=self.combo_xbi.get(),
             reward_type=RewardEnum(self.combo_reward.get()),
             pump_type=PumpEnum(self.combo_pump.get()),
             platform=PlatformEnum(self.combo_platform.get()),
             RFID=self.checkbox_rfid.get(),
-            screen_type=session_options.value.screen_type[
-                ScreenTypeEnum(self.combo_screen.get())
-            ],
-            comments=self.entry_comments.get(),
-            animals=animals,
+            screen_type=self._selected_screen_type(),
+            comments=comments,
+            animals=self._collect_animals(),
         )
 
+    def _collect_animals(self) -> dict[str, AnimalConfig]:
+        return {
+            animal_card.data.name: animal_card.data
+            for animal_card in self._animal_cards
+        }
+
+    def _selected_screen_type(self):
+        screen_key = ScreenTypeEnum(self.combo_screen.get())
+        return session_options.value.screen_type[screen_key]
+
+    def _save_and_close(self, config: SessionConfig) -> None:
         session_config.save(config)
         self._root.destroy()
 

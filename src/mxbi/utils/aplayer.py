@@ -2,12 +2,12 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from functools import lru_cache
 from threading import Event
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pyaudio
 from numpy.typing import NDArray
 from pydantic import BaseModel
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from mxbi.theater import Theater
