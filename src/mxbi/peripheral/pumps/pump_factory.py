@@ -23,8 +23,5 @@ class PumpFactory:
 
     @classmethod
     def create(cls, rewarder_type: PumpEnum) -> Rewarder:
-        try:
-            rewarder_cls = cls.pumps[rewarder_type]
-        except KeyError as exc:
-            raise ValueError(f"Unsupported rewarder type: {rewarder_type}") from exc
+        rewarder_cls = cls.pumps[rewarder_type]
         return rewarder_cls()

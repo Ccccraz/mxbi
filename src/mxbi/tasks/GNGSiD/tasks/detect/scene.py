@@ -4,7 +4,7 @@ from tkinter import CENTER, Canvas, Event
 from typing import TYPE_CHECKING, Final
 
 from mxbi.tasks.GNGSiD.models import Result, TouchEvent
-from mxbi.tasks.GNGSiD.tasks.detect.models import TrialConfig, TrialData, DataToShow
+from mxbi.tasks.GNGSiD.tasks.detect.models import DataToShow, TrialConfig, TrialData
 from mxbi.tasks.GNGSiD.tasks.utils.targets import DetectTarget
 from mxbi.utils.aplayer import ToneConfig
 from mxbi.utils.tkinter.components.canvas_with_border import CanvasWithInnerBorder
@@ -18,8 +18,8 @@ if TYPE_CHECKING:
 
     from mxbi.models.animal import AnimalState
     from mxbi.models.session import ScreenConfig, SessionConfig
-    from mxbi.theater import Theater
     from mxbi.tasks.GNGSiD.models import PersistentData
+    from mxbi.theater import Theater
 
 
 class GNGSiDDetectScene:
@@ -104,8 +104,6 @@ class GNGSiDDetectScene:
             stimulus=self._trial_config.go,
         )
         self._show_data_widget.show_data(data.model_dump())
-        
-
 
     def _create_target(self):
         xshift = 240

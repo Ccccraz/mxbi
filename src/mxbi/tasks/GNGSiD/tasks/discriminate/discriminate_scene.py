@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING, Final
 
 from mxbi.tasks.GNGSiD.models import Result, TouchEvent
 from mxbi.tasks.GNGSiD.tasks.discriminate.discriminate_models import (
+    DataToShow,
     TrialConfig,
     TrialData,
-    DataToShow
 )
 from mxbi.tasks.GNGSiD.tasks.utils.targets import DiscriminateTarget
 from mxbi.utils.aplayer import StimulusSequenceUnit
@@ -17,8 +17,8 @@ from mxbi.utils.tkinter.components.showdata_widget import ShowDataWidget
 if TYPE_CHECKING:
     from mxbi.models.animal import AnimalState
     from mxbi.models.session import ScreenConfig, SessionConfig
-    from mxbi.theater import Theater
     from mxbi.tasks.GNGSiD.models import PersistentData
+    from mxbi.theater import Theater
 
 
 class GNGSiDDiscriminateScene:
@@ -143,7 +143,6 @@ class GNGSiDDiscriminateScene:
             stimulus=self._trial_config.is_stimulus_trial,
         )
         self._show_data_widget.show_data(data.model_dump())
-        
 
     def _create_target(self) -> None:
         x_shift = 240

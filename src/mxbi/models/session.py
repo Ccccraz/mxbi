@@ -2,11 +2,11 @@ from enum import StrEnum, auto
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from mxbi.detector.detector_factory import DetectorEnum
 from mxbi.models.animal import AnimalConfig, AnimalOptions
 from mxbi.models.reward import RewardEnum
 from mxbi.peripheral.pumps.pump_factory import DEFAULT_PUMP, PumpEnum
 from mxbi.utils.detect_platform import PlatformEnum
-from mxbi.detector.detector_factory import DetectorEnum
 
 
 class ScreenTypeEnum(StrEnum):
