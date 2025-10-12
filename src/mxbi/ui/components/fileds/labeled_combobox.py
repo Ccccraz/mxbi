@@ -9,13 +9,14 @@ class LabeledCombobox(Frame):
         values: list[str],
         default_value: str,
         width: int = 15,
+        state: str = "readonly",
     ) -> None:
         super().__init__(master)
 
         label = Label(self, text=label_name, width=width)
         label.grid(row=0, column=0, padx=(10, 0), pady=2, sticky="w")
 
-        self._combo = Combobox(self, values=values, state="readonly")
+        self._combo = Combobox(self, values=values, state=state)
         self._combo.grid(row=0, column=1, padx=(0, 10), pady=2, sticky="ew")
         self._combo.set(default_value)
 
@@ -31,7 +32,8 @@ def create_cobmbo(
     values: list[str],
     default_value: str,
     width: int = 15,
+    state: str = "readonly",
 ) -> LabeledCombobox:
-    combo = LabeledCombobox(master, label_text, values, default_value, width)
+    combo = LabeledCombobox(master, label_text, values, default_value, width, state)
 
     return combo

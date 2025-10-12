@@ -29,7 +29,7 @@ class DetectionResult:
 
 
 class AnimalDetectorStateMachine:
-    def __init__(self, detector: "AnimalDetector") -> None:
+    def __init__(self, detector: "Detector") -> None:
         self.detector = detector
 
         self.current_state: DetectorState = DetectorState.NO_ANIMAL
@@ -116,9 +116,11 @@ class AnimalDetectorStateMachine:
             self.detector._emit_event(DetectorEvent.ANIMAL_ENTERED, animal_name)
 
 
-class AnimalDetector(ABC):
-    def __init__(self, theater: "Theater") -> None:
+class Detector(ABC):
+    def __init__(self, theater: "Theater", port: str = "", baudrate: int = 0) -> None:
         self._theater = theater
+        self._port = port
+        self._baudrate = baudrate
         self._callbacks: dict[DetectorEvent, list[Callable[[str], None]]] = {}
 
         self._is_running: bool = False

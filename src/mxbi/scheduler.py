@@ -3,10 +3,10 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
 
-from mxbi.animal_detector.animal_detector import AnimalDetector, DetectorEvent
-from mxbi.animal_detector.debug_detector import DebugDetector
 from mxbi.config import session_config
 from mxbi.data_logger import DataLogger
+from mxbi.detector.detector import Detector, DetectorEvent
+from mxbi.detector.detector_factory import DetectorFactory
 from mxbi.models.animal import AnimalState
 from mxbi.models.scheduler import SchedulerState, ScheduleRunningStateEnum
 from mxbi.models.task import TaskEnum
@@ -46,7 +46,7 @@ class SchedulerHistoryRecord(BaseModel):
 class Scheduler:
     def __init__(self, theater: "Theater") -> None:
         self._theater = theater
-        self._detector: AnimalDetector = DebugDetector(theater)
+        self._detector: Detector = self._init_detector()
 
         self._animal_states = {
             animal.name: AnimalState(
@@ -67,6 +67,12 @@ class Scheduler:
         )
 
         self._bind_events()
+
+    def _init_detector(self) -> Detector:
+        config = self._theater.session_config
+        baudrate = config.detector_baudrate or 0
+        port = config.detector_port or ""
+        return DetectorFactory.create(config.detector, self._theater, baudrate, port)
 
     def start(self) -> None:
         self._detector.start()

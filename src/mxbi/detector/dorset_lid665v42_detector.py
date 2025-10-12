@@ -1,15 +1,14 @@
 from threading import Thread
 from typing import Callable
 
-from mxbi.animal_detector.animal_detector import AnimalDetector, DetectionResult
-from mxbi.peripheral.rfid.dorset_lid665v42 import DorsetLID665v42
-from mxbi.peripheral.rfid.dorset_lid665v42 import Result
+from mxbi.detector.detector import DetectionResult, Detector
+from mxbi.peripheral.rfid.dorset_lid665v42 import DorsetLID665v42, Result
 
 
-class DorsetLID665v42Detector(AnimalDetector):
+class DorsetLID665v42Detector(Detector):
     def __init__(self, theater, port: str, baudrate: int) -> None:
-        super().__init__(theater)
-        self._scanner = DorsetLID665v42(port, baudrate)
+        super().__init__(theater, port, baudrate)
+        self._scanner = DorsetLID665v42(self._port, self._baudrate)
 
         self._reader_thread: Thread | None = None
         self._callback: Callable[[Result], None] | None = None
