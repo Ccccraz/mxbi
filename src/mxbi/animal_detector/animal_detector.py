@@ -1,8 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import StrEnum, auto
-from threading import Thread
-from time import sleep
+from threading import Lock
 from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
@@ -122,17 +121,23 @@ class AnimalDetector(ABC):
         self._theater = theater
         self._callbacks: dict[DetectorEvent, list[Callable[[str], None]]] = {}
 
-        self._is_detecting: bool = False
-        self._thread: Thread = Thread(target=self._detect)
-
+        self._is_running: bool = False
+        self._state_lock = Lock()
         self._state_machine = AnimalDetectorStateMachine(self)
 
     def start(self) -> None:
-        self._thread.start()
+        if self._is_running:
+            return
+
+        self._is_running = True
+        self._start_detection()
 
     def quit(self) -> None:
-        self._is_detecting = False
-        self._thread.join()
+        if not self._is_running:
+            return
+
+        self._is_running = False
+        self._stop_detection()
 
     def register_event(
         self, event: DetectorEvent, callback: Callable[[str], None]
@@ -147,16 +152,18 @@ class AnimalDetector(ABC):
         for callback in self._callbacks[event]:
             callback(animal_name)
 
-    def _detect(self) -> None:
-        self._is_detecting = True
-        while self._is_detecting:
-            animal = self._detect_animal()
-            self._state_machine.transition(animal)
+    def process_detection(self, detection_result: DetectionResult) -> None:
+        if not self._is_running:
+            return
 
-            sleep(0.1)
+        with self._state_lock:
+            self._state_machine.transition(detection_result)
 
     @abstractmethod
-    def _detect_animal(self) -> DetectionResult: ...
+    def _start_detection(self) -> None: ...
+
+    @abstractmethod
+    def _stop_detection(self) -> None: ...
 
     @property
     def current_animal(self) -> str | None:
