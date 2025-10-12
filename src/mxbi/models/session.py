@@ -6,6 +6,7 @@ from mxbi.models.animal import AnimalConfig, AnimalOptions
 from mxbi.models.reward import RewardEnum
 from mxbi.peripheral.pumps.pump_factory import DEFAULT_PUMP, PumpEnum
 from mxbi.utils.detect_platform import PlatformEnum
+from mxbi.detector.detector_factory import DetectorEnum
 
 
 class ScreenTypeEnum(StrEnum):
@@ -29,7 +30,9 @@ class SessionConfig(BaseModel):
     reward_type: RewardEnum = RewardEnum.AGUM_ONE_FIFTH
     pump_type: PumpEnum = DEFAULT_PUMP
     platform: PlatformEnum = PlatformEnum.RASPBERRY
-    RFID: bool = True
+    detector: DetectorEnum = DetectorEnum.MOCK
+    detector_port: str | None = None
+    detector_baudrate: int | None = None
     screen_type: ScreenConfig = Field(default_factory=ScreenConfig)
     animals: dict[str, AnimalConfig] = Field(default_factory=dict)
 
@@ -50,7 +53,10 @@ class SessionOptions(BaseModel):
     reward_type: list[RewardEnum] = Field(default_factory=lambda: list(RewardEnum))
     pump_type: list[PumpEnum] = Field(default_factory=lambda: list(PumpEnum))
     platform: list[PlatformEnum] = Field(default_factory=lambda: list(PlatformEnum))
-    RFID: list[bool] = Field(default_factory=lambda: [False, True])
+    detecotr: list[DetectorEnum] = Field(default_factory=lambda: list(DetectorEnum))
+    detector_baudrates: list[int] = Field(
+        default_factory=lambda: [9600, 19200, 38400, 57600, 115200]
+    )
     screen_type: dict[ScreenTypeEnum, ScreenConfig] = Field(
         default_factory=lambda: dict({ScreenTypeEnum.DEFAULT: ScreenConfig()})
     )

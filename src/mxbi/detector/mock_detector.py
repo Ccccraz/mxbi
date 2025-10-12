@@ -1,10 +1,10 @@
-from mxbi.animal_detector.animal_detector import AnimalDetector, DetectionResult
+from mxbi.detector.detector import DetectionResult, Detector
 from mxbi.utils.logger import logger
 
 
-class DebugDetector(AnimalDetector):
-    def __init__(self, theater) -> None:
-        super().__init__(theater)
+class MockDetector(Detector):
+    def __init__(self, theater, port: str, baudrate: int) -> None:
+        super().__init__(theater, port, baudrate)
 
         self.__result = DetectionResult("mock_001", False)
         self._theater.root.bind("<p>", self.__on_mock_001_animal_entered)

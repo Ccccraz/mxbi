@@ -19,6 +19,13 @@
 		"mxbi8",
 		"mxbi9"
 	],
+	"detector_baudrates": [
+		9600,
+		19200,
+		38400,
+		57600,
+		115200
+	],
 	"animal": {
 		"name": [
 			"mock_001",
