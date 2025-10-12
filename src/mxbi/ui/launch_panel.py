@@ -20,6 +20,7 @@ from mxbi.utils.detect_platform import PlatformEnum
 
 class LaunchPanel:
     """Tkinter based configuration launcher for MXBI sessions."""
+
     def __init__(
         self,
     ) -> None:
@@ -228,9 +229,7 @@ class LaunchPanel:
         )
         self._save_and_close(config)
 
-    def _build_session_config(
-        self, experimenter: str, comments: str
-    ) -> SessionConfig:
+    def _build_session_config(self, experimenter: str, comments: str) -> SessionConfig:
         return SessionConfig(
             experimenter=experimenter,
             xbi_id=self.combo_xbi.get(),

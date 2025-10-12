@@ -1,4 +1,4 @@
-from mxbi.tasks.GNGSiD.models import BaseTrialConfig, BaseTrialData, BaseDataToShow
+from mxbi.tasks.GNGSiD.models import BaseDataToShow, BaseTrialConfig, BaseTrialData
 
 
 class TrialConfig(BaseTrialConfig):

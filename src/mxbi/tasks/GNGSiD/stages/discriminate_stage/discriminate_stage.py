@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Final
 
 from mxbi.data_logger import DataLogger
 from mxbi.models.animal import ScheduleCondition
-from mxbi.tasks.GNGSiD.models import Result
+from mxbi.tasks.GNGSiD.models import PersistentData, Result
 from mxbi.tasks.GNGSiD.stages.discriminate_stage.discriminate_stage_models import (
     DiscriminateStageConfig,
     config,
@@ -13,7 +13,6 @@ from mxbi.tasks.GNGSiD.tasks.discriminate.discriminate_scene import (
     GNGSiDDiscriminateScene,
 )
 from mxbi.utils.logger import logger
-from mxbi.tasks.GNGSiD.models import PersistentData
 
 if TYPE_CHECKING:
     from mxbi.models.animal import AnimalState

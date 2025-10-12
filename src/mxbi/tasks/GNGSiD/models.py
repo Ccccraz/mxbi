@@ -62,9 +62,9 @@ class BaseDataToShow(BaseModel):
     incorrect: int
     timeout: int
 
+
 class PersistentData(BaseModel):
     rewards: int
     correct: int
     incorrect: int
     timeout: int
-

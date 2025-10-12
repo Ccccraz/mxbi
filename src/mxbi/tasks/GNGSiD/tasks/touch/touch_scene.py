@@ -18,9 +18,9 @@ if TYPE_CHECKING:
 
     from mxbi.models.animal import AnimalState
     from mxbi.models.session import ScreenConfig, SessionConfig
+    from mxbi.tasks.GNGSiD.models import PersistentData
     from mxbi.tasks.GNGSiD.tasks.touch.touch_models import TrialConfig
     from mxbi.theater import Theater
-    from mxbi.tasks.GNGSiD.models import PersistentData
 
 
 class GNGSiDTouchScene:
