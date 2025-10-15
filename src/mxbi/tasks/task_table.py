@@ -12,6 +12,9 @@ from mxbi.tasks.GNGSiD.stages.size_reduction_stage.size_reduction_stage import (
     SizeReductionStage,
 )
 from mxbi.tasks.task_protocol import Task
+from mxbi.tasks.two_alternative_choice.stages.size_reduction_stage.size_reduction_stage import (
+    TWOACSizeReductionStage,
+)
 
 task_table: dict[TaskEnum, type[Task]] = {
     TaskEnum.IDEL: IDLEScene,
@@ -20,4 +23,5 @@ task_table: dict[TaskEnum, type[Task]] = {
     TaskEnum.GNGSiD_SIZE_REDUCTION_STAGE: SizeReductionStage,
     TaskEnum.GNGSiD_DETECT_STAGE: GNGSiDDetectStage,
     TaskEnum.GNGSiD_DISCRIMINATE_STAGE: GNGSiDDiscriminateStage,
+    TaskEnum.TWOAC_SIZE_REDUCTION_STAGE: TWOACSizeReductionStage,
 }
