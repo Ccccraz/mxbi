@@ -133,6 +133,7 @@ class TwoACTouchScene:
         # Manual reward
         self._background.focus_set()
         self._background.bind("<r>", lambda e: self._give_reward())
+        self._background.bind("<s>", lambda e: self._theater.caputre(self._background))
 
         # Trigger event
         self._background.bind("<ButtonPress>", self._on_background_touched)
