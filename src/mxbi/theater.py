@@ -1,6 +1,8 @@
 from datetime import datetime
-from tkinter import Event, Tk
+from tkinter import Canvas, Event, Tk
 from typing import Callable
+
+from mss import mss, tools
 
 from mxbi.config import session_config
 from mxbi.data_logger import DataLogger
@@ -15,6 +17,7 @@ from mxbi.peripheral.pumps.rewarder import Rewarder
 from mxbi.scheduler import Scheduler
 from mxbi.utils.aplayer import APlayer
 from mxbi.utils.detect_platform import PlatformEnum
+from mxbi.utils.logger import logger
 
 
 class Theater:
@@ -59,7 +62,7 @@ class Theater:
         self._root.title("mxbi")
         self._root.geometry(f"{screen_type.width}x{screen_type.height}")
 
-        self._root.after(1000, lambda: self._root.attributes("-fullscreen", False))
+        self._root.after(1000, lambda: self._root.attributes("-fullscreen", True))
 
     def _bind_event(self) -> None:
         self._root.bind("<Escape>", self._quit)
@@ -73,6 +76,30 @@ class Theater:
 
     def register_event_quit(self, callback: Callable[[], None]) -> None:
         self._on_quit.append(callback)
+
+    def caputre(self, region: Canvas):
+        region.update()
+
+        x0 = region.winfo_rootx()
+        y0 = region.winfo_rooty()
+        width = region.winfo_width()
+        height = region.winfo_height()
+
+        bbox = {
+            "top": int(y0),
+            "left": int(x0),
+            "width": int(width),
+            "height": int(height),
+        }
+        name = datetime.now().strftime("screenshot_%Y%m%d_%H%M%S.png")
+
+        try:
+            with mss() as sct:
+                sct_img = sct.grab(bbox)
+                tools.to_png(sct_img.rgb, sct_img.size, output=name)
+            logger.info(f"Screenshot saved: {name}")
+        except Exception as e:
+            logger.error(f"Screenshot failed: {e}")
 
     @property
     def reward(self) -> Rewarder:
