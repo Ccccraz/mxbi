@@ -1,3 +1,4 @@
+from pathlib import Path
 from tkinter.ttk import Label
 from typing import TYPE_CHECKING
 
@@ -10,6 +11,8 @@ if TYPE_CHECKING:
     from mxbi.models.session import SessionState
     from mxbi.models.task import Feedback
     from mxbi.theater import Theater
+
+ASSETS_PATH = Path(__file__).parent / "assets"
 
 
 class IDLEScene:
@@ -52,9 +55,7 @@ class IDLEScene:
         xcenter = self._screen_type.width / 2 + xshift
         ycenter = self._screen_type.height / 2
 
-        self._img = Image.open(
-            "/Users/ccccr/repo/project/mxbi/mxbi-tasks/src/mxbi/tasks/default/idle_task/assets/apple_v1.png"
-        )
+        self._img = Image.open(ASSETS_PATH / "apple_v1.png")
         self._img = self._img.resize((400, 400)).rotate(-90, expand=True)
         self._img = ImageTk.PhotoImage(self._img)
         self.label_apple = Label(self._background, image=self._img)

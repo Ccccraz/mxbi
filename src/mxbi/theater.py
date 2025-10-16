@@ -62,6 +62,7 @@ class Theater:
         self._root.title("mxbi")
         self._root.geometry(f"{screen_type.width}x{screen_type.height}")
 
+        self._root.config(cursor="none")
         self._root.after(1000, lambda: self._root.attributes("-fullscreen", True))
 
     def _bind_event(self) -> None:
