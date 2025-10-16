@@ -244,3 +244,42 @@ class DorsetLID665v42:
             except Exception:
                 # Callbacks are user code; errors must not break the read loop.
                 continue
+
+
+if __name__ == "__main__":
+    import time
+
+    animal_count = 0
+
+    def on_result(result: Result):
+        """Prints when an animal ID is successfully parsed, and increments the count"""
+        global animal_count
+        animal_count += 1
+        t = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(result.detect_time))
+        print(f"[{t}] 🐑 Animal detected #{animal_count}: ID={result.animal_id}")
+
+    PORT = "/dev/ttyUSB0"
+    BAUDRATE = 57600
+
+    reader = DorsetLID665v42(port=PORT, baudrate=BAUDRATE)
+
+    reader.subscribe(on_result)
+
+    try:
+        reader.open()
+        print(f"✅ Serial port {PORT} opened with baudrate {BAUDRATE}")
+        print(
+            "📡 Listening for Dorset LID665v42 data frames... (Press Ctrl+C to stop)\n"
+        )
+
+        reader.read()
+
+    except KeyboardInterrupt:
+        print("\n🛑 Manually stopped by user.")
+
+    except Exception as e:
+        print(f"❌ Error: {e}")
+
+    finally:
+        reader.close()
+        print(f"🔌 Serial port closed. Total animals detected: {animal_count}")

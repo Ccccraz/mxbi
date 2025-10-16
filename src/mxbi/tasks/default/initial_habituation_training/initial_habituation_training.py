@@ -59,7 +59,7 @@ class InitialHabituationTraining:
         self._create_view()
         self._init_data()
         self._bind_events()
-        self._start_reward_loop()
+        # self._start_reward_loop()
         self._start_tracking_data()
 
     def _create_view(self) -> None:
@@ -91,11 +91,10 @@ class InitialHabituationTraining:
     def _bind_events(self) -> None:
         # Manual reward
         self._background.focus_set()
-        self._background.bind("<r>", lambda e: self._give_reward)
+        self._background.bind("<r>", lambda e: self._give_reward())
 
     def _start_reward_loop(self) -> None:
         self._give_reward()
-        self._reward_times += 1
         self._data.rewards[datetime.now().timestamp()] = self._reward_times
         self._background.after(
             self._stage_config.params.stay_duration, self._start_reward_loop
@@ -109,12 +108,13 @@ class InitialHabituationTraining:
             name=self._animal_state.name,
             id=self._animal_state.trial_id,
             dur=f"{int(self._data.stay_duration)} s",
-            rewards=len(self._data.rewards),
+            rewards=self._reward_times
         )
         self._show_data_widget.update_data(data.model_dump())
         self._background.after(1000, self._start_tracking_data)
 
     def _give_reward(self) -> None:
+        self._reward_times += 1
         self._theater.reward.give_reward(self._stage_config.params.reward_duration)
 
     def _load_stage_config(self, monkey: str) -> DetectStageConfig:
